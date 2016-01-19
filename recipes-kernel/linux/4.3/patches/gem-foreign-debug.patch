@@ -34,8 +34,8 @@ PATCHES
 ################################################################################
 Index: linux-4.3.1/drivers/gpu/drm/i915/i915_gem.c
 ===================================================================
---- linux-4.3.1.orig/drivers/gpu/drm/i915/i915_gem.c	2015-12-11 15:58:30.471125612 +0100
-+++ linux-4.3.1/drivers/gpu/drm/i915/i915_gem.c	2015-12-11 16:00:07.826391246 +0100
+--- linux-4.3.1.orig/drivers/gpu/drm/i915/i915_gem.c	2016-01-19 14:45:23.105042341 +0100
++++ linux-4.3.1/drivers/gpu/drm/i915/i915_gem.c	2016-01-19 14:45:30.891618957 +0100
 @@ -505,8 +505,10 @@
  	}
  
@@ -118,8 +118,8 @@ Index: linux-4.3.1/drivers/gpu/drm/i915/i915_gem.c
  		if (ret)
 Index: linux-4.3.1/drivers/gpu/drm/i915/i915_gem_foreign.c
 ===================================================================
---- linux-4.3.1.orig/drivers/gpu/drm/i915/i915_gem_foreign.c	2015-12-11 15:58:30.471125612 +0100
-+++ linux-4.3.1/drivers/gpu/drm/i915/i915_gem_foreign.c	2015-12-11 15:58:32.537762536 +0100
+--- linux-4.3.1.orig/drivers/gpu/drm/i915/i915_gem_foreign.c	2016-01-19 14:45:23.398372280 +0100
++++ linux-4.3.1/drivers/gpu/drm/i915/i915_gem_foreign.c	2016-01-19 14:46:07.314530858 +0100
 @@ -239,6 +239,7 @@
  	size_t i;
  	int rc;
@@ -128,15 +128,15 @@ Index: linux-4.3.1/drivers/gpu/drm/i915/i915_gem_foreign.c
  	vmap->pvec = drm_malloc_ab(vmap->num_pages, sizeof (struct page *));
  	if (!vmap->pvec)
  		return -ENOMEM;
-@@ -291,6 +292,7 @@
+@@ -298,6 +299,7 @@
+ {
  	struct i915_gem_foreign_object *vmap = to_foreign_object(obj);
- 	/* int num_pages = obj->base.size >> PAGE_SHIFT; // Waaaaat? */
  
 +        DRM_DEBUG_DRIVER("%s()\n", __func__);
+ 	i915_gem_gtt_finish_object(obj);
  	sg_free_table(obj->pages);
  	kfree(obj->pages);
- 	i915_gem_foreign_reset_p2m(vmap);
-@@ -346,6 +348,8 @@
+@@ -354,6 +356,8 @@
  	int ret = -ENOMEM;
  	u32 handle;
  
