@@ -46,8 +46,8 @@ PATCHES
 ################################################################################
 Index: linux-4.3.1/drivers/gpu/drm/i915/Makefile
 ===================================================================
---- linux-4.3.1.orig/drivers/gpu/drm/i915/Makefile	2015-12-09 20:40:26.000000000 +0100
-+++ linux-4.3.1/drivers/gpu/drm/i915/Makefile	2016-01-19 14:40:58.634769457 +0100
+--- linux-4.3.1.orig/drivers/gpu/drm/i915/Makefile	2015-12-11 15:57:42.198487036 +0100
++++ linux-4.3.1/drivers/gpu/drm/i915/Makefile	2015-12-11 15:57:46.481758721 +0100
 @@ -32,6 +32,7 @@
  	  i915_gem_shrinker.o \
  	  i915_gem_stolen.o \
@@ -58,8 +58,8 @@ Index: linux-4.3.1/drivers/gpu/drm/i915/Makefile
  	  i915_trace_points.o \
 Index: linux-4.3.1/drivers/gpu/drm/i915/i915_dma.c
 ===================================================================
---- linux-4.3.1.orig/drivers/gpu/drm/i915/i915_dma.c	2015-12-09 20:40:26.000000000 +0100
-+++ linux-4.3.1/drivers/gpu/drm/i915/i915_dma.c	2016-01-19 14:40:58.721435119 +0100
+--- linux-4.3.1.orig/drivers/gpu/drm/i915/i915_dma.c	2015-12-11 15:57:42.198487036 +0100
++++ linux-4.3.1/drivers/gpu/drm/i915/i915_dma.c	2015-12-11 15:57:46.481758721 +0100
 @@ -1271,6 +1271,7 @@
  	DRM_IOCTL_DEF_DRV(I915_GEM_USERPTR, i915_gem_userptr_ioctl, DRM_UNLOCKED|DRM_RENDER_ALLOW),
  	DRM_IOCTL_DEF_DRV(I915_GEM_CONTEXT_GETPARAM, i915_gem_context_getparam_ioctl, DRM_UNLOCKED|DRM_RENDER_ALLOW),
@@ -70,8 +70,8 @@ Index: linux-4.3.1/drivers/gpu/drm/i915/i915_dma.c
  int i915_max_ioctl = ARRAY_SIZE(i915_ioctls);
 Index: linux-4.3.1/drivers/gpu/drm/i915/i915_drv.h
 ===================================================================
---- linux-4.3.1.orig/drivers/gpu/drm/i915/i915_drv.h	2015-12-09 20:40:26.000000000 +0100
-+++ linux-4.3.1/drivers/gpu/drm/i915/i915_drv.h	2016-01-19 14:40:58.854766910 +0100
+--- linux-4.3.1.orig/drivers/gpu/drm/i915/i915_drv.h	2015-12-11 15:57:42.201820322 +0100
++++ linux-4.3.1/drivers/gpu/drm/i915/i915_drv.h	2015-12-11 15:58:23.677890047 +0100
 @@ -2102,6 +2102,7 @@
  
  	struct sg_table *pages;
@@ -92,8 +92,8 @@ Index: linux-4.3.1/drivers/gpu/drm/i915/i915_drv.h
 Index: linux-4.3.1/drivers/gpu/drm/i915/i915_gem_foreign.c
 ===================================================================
 --- /dev/null	1970-01-01 00:00:00.000000000 +0000
-+++ linux-4.3.1/drivers/gpu/drm/i915/i915_gem_foreign.c	2016-01-19 14:45:13.558486131 +0100
-@@ -0,0 +1,406 @@
++++ linux-4.3.1/drivers/gpu/drm/i915/i915_gem_foreign.c	2015-12-11 16:10:40.957283530 +0100
+@@ -0,0 +1,398 @@
 +/*
 + * Copyright © 2013 Citrix Systems, Inc.
 + *
@@ -366,14 +366,6 @@ Index: linux-4.3.1/drivers/gpu/drm/i915/i915_gem_foreign.c
 +	}
 +	obj->pages = st;
 +
-+	rc = i915_gem_gtt_prepare_object(obj);
-+	if (rc) {
-+		DRM_ERROR("Failed to prepare DMA mapping for object.\n");
-+		sg_free_table(obj->pages);
-+		obj->pages = NULL;
-+		goto fail_sg;
-+	}
-+
 +	return 0;
 +
 +fail_sg:
@@ -393,8 +385,8 @@ Index: linux-4.3.1/drivers/gpu/drm/i915/i915_gem_foreign.c
 +i915_gem_foreign_put_pages(struct drm_i915_gem_object *obj)
 +{
 +	struct i915_gem_foreign_object *vmap = to_foreign_object(obj);
++	/* int num_pages = obj->base.size >> PAGE_SHIFT; // Waaaaat? */
 +
-+	i915_gem_gtt_finish_object(obj);
 +	sg_free_table(obj->pages);
 +	kfree(obj->pages);
 +	i915_gem_foreign_reset_p2m(vmap);
@@ -502,8 +494,8 @@ Index: linux-4.3.1/drivers/gpu/drm/i915/i915_gem_foreign.c
 +
 Index: linux-4.3.1/include/uapi/drm/i915_drm.h
 ===================================================================
---- linux-4.3.1.orig/include/uapi/drm/i915_drm.h	2015-12-09 20:40:26.000000000 +0100
-+++ linux-4.3.1/include/uapi/drm/i915_drm.h	2016-01-19 14:40:58.898099741 +0100
+--- linux-4.3.1.orig/include/uapi/drm/i915_drm.h	2015-12-11 15:57:42.201820322 +0100
++++ linux-4.3.1/include/uapi/drm/i915_drm.h	2015-12-11 15:57:46.485092007 +0100
 @@ -230,6 +230,7 @@
  #define DRM_I915_GEM_USERPTR		0x33
  #define DRM_I915_GEM_CONTEXT_GETPARAM	0x34
