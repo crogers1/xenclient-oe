@@ -1,0 +1,70 @@
+################################################################################
+SHORT DESCRIPTION: 
+################################################################################
+QSB-023 (https://github.com/QubesOS/qubes-secpack/blob/master/QSBs/qsb-023-2015)
+XSA-155 additional patches for the Xen network and block frontends from Qubes
+OS Project.
+
+################################################################################
+LONG DESCRIPTION: 
+################################################################################
+Source: https://github.com/QubesOS/qubes-linux-kernel/tree/stable-3.18/patches.xen
+Patch: xsa155-linux318-0010-xen-netfront-do-not-use-data-already-exposed-to-back.patch
+
+Backend may freely modify anything on shared page, so use data which was
+supposed to be written there, instead of reading it back from the shared pckend
+may freely modify anything on shared page, so use data which was supposed to be
+written there, instead of reading it back from the shared page.
+
+################################################################################
+PATCHES 
+################################################################################
+Index: linux-4.3.1/drivers/net/xen-netfront.c
+===================================================================
+--- linux-4.3.1.orig/drivers/net/xen-netfront.c	2016-01-21 16:25:09.361569626 +0100
++++ linux-4.3.1/drivers/net/xen-netfront.c	2016-01-21 16:25:09.694898000 +0100
+@@ -454,17 +454,19 @@
+ 	struct sk_buff *skb, struct page *page,
+ 	unsigned int offset, unsigned int len)
+ {
++	unsigned int this_len;
+ 	/* Skip unused frames from start of page */
+ 	page += offset >> PAGE_SHIFT;
+ 	offset &= ~PAGE_MASK;
+ 
+ 	while (len) {
+ 		tx->flags |= XEN_NETTXF_more_data;
++		this_len = min_t(unsigned int, PAGE_SIZE - offset, len);
+ 		tx = xennet_make_one_txreq(queue, skb_get(skb),
+-					   page, offset, len);
++					   page, offset, this_len);
+ 		page++;
+ 		offset = 0;
+-		len -= tx->size;
++		len -= this_len;
+ 	}
+ 
+ 	return tx;
+@@ -523,7 +525,7 @@
+ 	int slots;
+ 	struct page *page;
+ 	unsigned int offset;
+-	unsigned int len;
++	unsigned int len, this_len;
+ 	unsigned long flags;
+ 	struct netfront_queue *queue = NULL;
+ 	unsigned int num_queues = dev->real_num_tx_queues;
+@@ -568,11 +570,12 @@
+ 	}
+ 
+ 	/* First request for the linear area. */
++	this_len = min_t(unsigned int, PAGE_SIZE - offset, len);
+ 	first_tx = tx = xennet_make_one_txreq(queue, skb,
+ 					      page, offset, len);
+ 	page++;
+ 	offset = 0;
+-	len -= tx->size;
++	len -= this_len;
+ 
+ 	if (skb->ip_summed == CHECKSUM_PARTIAL)
+ 		/* local packet? */
