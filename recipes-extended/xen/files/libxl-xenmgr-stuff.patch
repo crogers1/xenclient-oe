@@ -162,16 +162,28 @@ Index: xen-4.6.1/tools/libxl/libxl_create.c
  
      libxl__xs_mkdir(gc, t,
                      libxl__sprintf(gc, "%s/control/shutdown", dom_path),
-@@ -911,6 +915,8 @@ static void initiate_domain_create(libxl
+@@ -677,6 +681,11 @@ retry_transaction:
+     libxl__xs_writev(gc, t, dom_path, info->xsdata);
+     libxl__xs_writev(gc, t, libxl__sprintf(gc, "%s/platform", dom_path), info->platformdata);
+ 
++    if(d_config->b_info.display_depth)
++        xs_write(ctx->xsh, t, libxl__sprintf(gc, "%s/platform/restrictdisplaydepth", dom_path), "1", 1);
++    if(d_config->b_info.display_res)
++        xs_write(ctx->xsh, t, libxl__sprintf(gc, "%s/platform/restrictdisplayres", dom_path), "1", 1);
++
+     xs_write(ctx->xsh, t, libxl__sprintf(gc, "%s/control/platform-feature-multiprocessor-suspend", dom_path), "1", 1);
+     xs_write(ctx->xsh, t, libxl__sprintf(gc, "%s/control/platform-feature-xs_reset_watches", dom_path), "1", 1);
+     if (!xs_transaction_end(ctx->xsh, t, 0)) {
+@@ -911,6 +920,8 @@ static void initiate_domain_create(libxl
      dcs->guest_domid = domid;
      dcs->dmss.dm.guest_domid = 0; /* means we haven't spawned */
  
-+	libxl_update_state(ctx, domid, "creating-devices");
++     libxl_update_state(ctx, domid, "creating-devices");
 +
      ret = libxl__domain_build_info_setdefault(gc, &d_config->b_info);
      if (ret) {
          LOG(ERROR, "Unable to set domain build info defaults");
-@@ -1278,17 +1284,12 @@ static void domcreate_launch_dm(libxl__e
+@@ -1278,17 +1289,12 @@ static void domcreate_launch_dm(libxl__e
      {
          libxl__device_console console;
          libxl__device device;
@@ -189,7 +201,7 @@ Index: xen-4.6.1/tools/libxl/libxl_create.c
          dcs->dmss.dm.guest_domid = domid;
          if (libxl_defbool_val(d_config->b_info.device_model_stubdomain))
              libxl__spawn_stub_dm(egc, &dcs->dmss);
-@@ -1311,17 +1312,20 @@ static void domcreate_launch_dm(libxl__e
+@@ -1311,17 +1317,20 @@ static void domcreate_launch_dm(libxl__e
          libxl__device_console console;
          libxl__device device;
  
@@ -347,7 +359,7 @@ Index: xen-4.6.1/tools/libxl/libxl_types.idl
      ])
  
 +libxl_display_info = Struct("display_info", [
-+    ("kind",	string),
++    ("kind",    string),
 +    ])
 +
  libxl_vnc_info = Struct("vnc_info", [
@@ -361,7 +373,18 @@ Index: xen-4.6.1/tools/libxl/libxl_types.idl
      ("shutdown_reason", libxl_shutdown_reason),
      ("outstanding_memkb",  MemKB),
      ("current_memkb",   MemKB),
-@@ -488,6 +494,7 @@ libxl_domain_build_info = Struct("domain
+@@ -440,6 +446,10 @@ libxl_domain_build_info = Struct("domain
+     ("device_model_ssidref", uint32),
+     ("device_model_ssid_label", string),
+ 
++    #display restrictions
++    ("display_depth", uint32),
++    ("display_res", uint32),
++
+     # extra parameters pass directly to qemu, NULL terminated
+     ("extra",            libxl_string_list),
+     # extra parameters pass directly to qemu for PV guest, NULL terminated
+@@ -488,6 +498,7 @@ libxl_domain_build_info = Struct("domain
                                         ("nographic",        libxl_defbool),
                                         ("vga",              libxl_vga_interface_info),
                                         ("vnc",              libxl_vnc_info),
@@ -383,7 +406,7 @@ Index: xen-4.6.1/tools/libxl/libxl_utils.c
 +    int ret;
 +    ret = xc_get_hvm_param(ctx->xch, domid, HVM_PARAM_ACPI_S_STATE, &hvm_s_state);
 +    if (ret < 0) { 
-+    	hvm_s_state = 9; //since unsigned, use invalid acpi state
++        hvm_s_state = 9; //since unsigned, use invalid acpi state
 +    }
 +    *acpi_state = hvm_s_state;
 +    return 0;
@@ -416,7 +439,7 @@ Index: xen-4.6.1/tools/libxl/libxl_utils.c
 +
 +int libxl_domid_to_uuid(libxl_ctx *ctx, libxl_uuid **uuid, uint32_t domid_in)
 +{
-+	int nb_domains, i;
++    int nb_domains, i;
 +    uint32_t domid;
 +    libxl_dominfo *dominfo;
 +
@@ -431,8 +454,8 @@ Index: xen-4.6.1/tools/libxl/libxl_utils.c
 +            return 0;
 +        }
 +    }
-+	*uuid = NULL;
-+	return -1;
++    *uuid = NULL;
++    return -1;
 +}
 +
  int libxl_domain_qualifier_to_domid(libxl_ctx *ctx, const char *name,
@@ -444,52 +467,52 @@ Index: xen-4.6.1/tools/libxl/libxl_utils.c
  
 +int libxl_read_reboot(libxl_ctx *ctx, uint32_t domid, char **state)
 +{
-+	char path[49];
-+	char uuid[37];
-+	libxl_dominfo domain;
++    char path[49];
++    char uuid[37];
++    libxl_dominfo domain;
 +
-+	libxl_domain_info(ctx, &domain, domid);
++    libxl_domain_info(ctx, &domain, domid);
 +
-+	uuid_unparse(domain.uuid.uuid, uuid);
-+	sprintf(path, "/state/%s/reboot", uuid);    
++    uuid_unparse(domain.uuid.uuid, uuid);
++    sprintf(path, "/state/%s/reboot", uuid);    
 +
-+	*state = xs_read(ctx->xsh, XBT_NULL, path, NULL);
++    *state = xs_read(ctx->xsh, XBT_NULL, path, NULL);
 +
-+	return 0;
++    return 0;
 +}
 +
 +int libxl_set_reboot(libxl_ctx *ctx, uint32_t domid, bool reboot)
 +{
-+	char path[49];
-+	char uuid[37];
-+	libxl_dominfo domain;
++    char path[49];
++    char uuid[37];
++    libxl_dominfo domain;
 +
-+	libxl_domain_info(ctx, &domain, domid);
-+	uuid_unparse(domain.uuid.uuid, uuid);
++    libxl_domain_info(ctx, &domain, domid);
++    uuid_unparse(domain.uuid.uuid, uuid);
 +
-+	sprintf(path, "/state/%s/reboot", uuid);
-+	if(reboot)
-+	   xs_write(ctx->xsh, XBT_NULL, path, "1", strlen("1"));
-+	else
-+	   xs_rm(ctx->xsh, XBT_NULL, path); 
++    sprintf(path, "/state/%s/reboot", uuid);
++    if(reboot)
++        xs_write(ctx->xsh, XBT_NULL, path, "1", strlen("1"));
++    else
++        xs_rm(ctx->xsh, XBT_NULL, path); 
 +
-+	return 0;
++    return 0;
 +}
 +
 +int libxl_update_state_direct(libxl_ctx *ctx, libxl_uuid xl_uuid, const char * state)
 +{
-+	char path[48];
-+	char uuid[37];
++    char path[48];
++    char uuid[37];
 +
-+	uuid_unparse(xl_uuid.uuid, uuid);
-+	sprintf(path, "/state/%s/state", uuid);
++    uuid_unparse(xl_uuid.uuid, uuid);
++    sprintf(path, "/state/%s/state", uuid);
 +
-+	if (!xs_write(ctx->xsh, XBT_NULL, path, state, strlen(state)))
-+	{
-+	   fprintf(stderr, "Failed to write the xenstore node: %s with state: %s\n", path, state);
-+	}
++    if (!xs_write(ctx->xsh, XBT_NULL, path, state, strlen(state)))
++    {
++        fprintf(stderr, "Failed to write the xenstore node: %s with state: %s\n", path, state);
++    }
 +
-+	return 0;
++    return 0;
 +
 +}
 +
@@ -506,12 +529,12 @@ Index: xen-4.6.1/tools/libxl/libxl_utils.c
 +    
 +    for(i = 0; i < nb_domains; i++)
 +    {
-+		domid = dominfo[i].domid;
-+		if (domid == domid_in)
-+		{
-+			xl_uuid = &dominfo[i].uuid;
-+			break;
-+		}
++        domid = dominfo[i].domid;
++        if (domid == domid_in)
++        {
++            xl_uuid = &dominfo[i].uuid;
++            break;
++        }
 +    }
 +    if (!xl_uuid){
 +        fprintf(stderr, "Failed to find the uuid\n");
@@ -582,14 +605,26 @@ Index: xen-4.6.1/tools/libxl/xl_cmdimpl.c
  {
      const char *buf;
      long l, vcpus = 0;
-+	long vkb_flag, vfb_flag;
++    long vkb_flag, vfb_flag;
      XLU_Config *config;
 -    XLU_ConfigList *cpus, *vbds, *nics, *pcis, *cvfbs, *cpuids, *vtpms;
 +    XLU_ConfigList *cpus, *vbds, *nics, *pcis, *cpuids, *vtpms;
      XLU_ConfigList *channels, *ioports, *irqs, *iomem, *viridian, *dtdevs;
      int num_ioports, num_irqs, num_iomem, num_cpus, num_viridian;
      int pci_power_mgmt = 0;
-@@ -1944,12 +1945,46 @@ skip_nic:
+@@ -1487,6 +1488,11 @@ static void parse_config_data(const char
+ 
+     xlu_cfg_get_defbool(config, "driver_domain", &c_info->driver_domain, 0);
+ 
++    if(!xlu_cfg_get_long(config, "restrictdisplaydepth", &l, 0))
++        b_info->display_depth = l;
++    if(!xlu_cfg_get_long(config, "restrictdisplayres", &l, 0))
++        b_info->display_res = l;
++
+     switch(b_info->type) {
+     case LIBXL_DOMAIN_TYPE_HVM:
+         kernel_basename = libxl_basename(b_info->kernel);
+@@ -1944,12 +1950,46 @@ skip_nic:
          fprintf(stderr, "WARNING: vif2: netchannel2 is deprecated and not supported by xl\n");
      }
  
@@ -634,14 +669,14 @@ Index: xen-4.6.1/tools/libxl/xl_cmdimpl.c
 +    }
 +   /* 
      if (!xlu_cfg_get_list (config, "vfb", &cvfbs, 0, 0)) {
-+		d_config->num_vfbs = 0;
-+		d_config->num_vkbs = 0;
-+		d_config->vfbs = NULL;
-+		d_config->vkbs = NULL;
++        d_config->num_vfbs = 0;
++        d_config->num_vkbs = 0;
++        d_config->vfbs = NULL;
++        d_config->vkbs = NULL;
          while ((buf = xlu_cfg_get_listitem (cvfbs, d_config->num_vfbs)) != NULL) {
              libxl_device_vfb *vfb;
              libxl_device_vkb *vkb;
-@@ -2003,7 +2038,7 @@ skip_nic:
+@@ -2003,7 +2043,7 @@ skip_nic:
  skip_vfb:
              free(buf2);
          }
@@ -650,7 +685,7 @@ Index: xen-4.6.1/tools/libxl/xl_cmdimpl.c
  
      if (!xlu_cfg_get_long (config, "pci_msitranslate", &l, 0))
          pci_msitranslate = l;
-@@ -2264,6 +2299,19 @@ skip_vfb:
+@@ -2264,6 +2304,19 @@ skip_vfb:
              b_info->u.hvm.vga.kind = l ? LIBXL_VGA_INTERFACE_TYPE_STD :
                                           LIBXL_VGA_INTERFACE_TYPE_CIRRUS;
  
@@ -670,45 +705,44 @@ Index: xen-4.6.1/tools/libxl/xl_cmdimpl.c
          if (!xlu_cfg_get_string(config, "hdtype", &buf, 0) &&
              libxl_hdtype_from_string(buf, &b_info->u.hvm.hdtype)) {
                  fprintf(stderr, "ERROR: invalid value \"%s\" for \"hdtype\"\n",
-@@ -2426,17 +2474,28 @@ static int handle_domain_death(uint32_t
+@@ -2426,17 +2479,28 @@ static int handle_domain_death(uint32_t
  
  {
      int restart = 0;
-+	char * reboot = NULL;
++    char * reboot = NULL;
      libxl_action_on_shutdown action;
  
      switch (event->u.domain_shutdown.shutdown_reason) {
      case LIBXL_SHUTDOWN_REASON_POWEROFF:
--        action = d_config->on_poweroff;
-+		action = d_config->on_poweroff;
-+		libxl_read_reboot(ctx, *r_domid, &reboot);
-+		if(reboot)
-+		{
-+			if(strcmp(reboot, "1") == 0)
-+			{
-+				LOG("Setting domain action to reboot");
-+				action = d_config->on_reboot;       
-+			}
-+		}
+         action = d_config->on_poweroff;
++        libxl_read_reboot(ctx, *r_domid, &reboot);
++        if(reboot)
++        {
++            if(strcmp(reboot, "1") == 0)
++            {
++                LOG("Setting domain action to reboot");
++                action = d_config->on_reboot;       
++            }
++        }
          break;
      case LIBXL_SHUTDOWN_REASON_REBOOT:
          action = d_config->on_reboot;
          break;
      case LIBXL_SHUTDOWN_REASON_SUSPEND:
          LOG("Domain has suspended.");
-+		libxl_update_state(ctx, *r_domid, "suspended");
++        libxl_update_state(ctx, *r_domid, "suspended");
          return 0;
      case LIBXL_SHUTDOWN_REASON_CRASH:
          action = d_config->on_crash;
-@@ -2483,6 +2542,7 @@ static int handle_domain_death(uint32_t
+@@ -2483,6 +2547,7 @@ static int handle_domain_death(uint32_t
      case LIBXL_ACTION_ON_SHUTDOWN_RESTART:
          reload_domain_config(*r_domid, d_config);
          restart = 1;
-+		libxl_set_reboot(ctx, *r_domid, 0);
++        libxl_set_reboot(ctx, *r_domid, 0);
          /* fall-through */
      case LIBXL_ACTION_ON_SHUTDOWN_DESTROY:
          LOG("Domain %d needs to be cleaned up: destroying the domain",
-@@ -2885,6 +2945,7 @@ start:
+@@ -2885,6 +2950,7 @@ start:
          ret = libxl_domain_create_new(ctx, &d_config, &domid,
                                        0, autoconnect_console_how);
      }
@@ -716,16 +750,16 @@ Index: xen-4.6.1/tools/libxl/xl_cmdimpl.c
      if ( ret )
          goto error_out;
  
-@@ -2897,6 +2958,8 @@ start:
+@@ -2897,6 +2963,8 @@ start:
          restore_fd_to_close = -1;
      }
  
-+	libxl_update_state(ctx, domid, "created");
++    libxl_update_state(ctx, domid, "created");
 +
      if (!paused)
          libxl_domain_unpause(ctx, domid);
  
-@@ -2979,7 +3042,7 @@ start:
+@@ -2979,7 +3047,7 @@ start:
                  dom_info->console_autoconnect = 0;
  
                  /* Some settings only make sense on first boot. */
@@ -734,53 +768,53 @@ Index: xen-4.6.1/tools/libxl/xl_cmdimpl.c
                  if (common_domname
                      && strcmp(d_config.c_info.name, common_domname)) {
                      d_config.c_info.name = strdup(common_domname);
-@@ -2990,6 +3053,7 @@ start:
+@@ -2990,6 +3058,7 @@ start:
                   * re-creation fails sometimes.
                   */
                  LOG("Done. Rebooting now");
-+				libxl_update_state_direct(ctx, d_config.c_info.uuid, "rebooted");
++                libxl_update_state_direct(ctx, d_config.c_info.uuid, "rebooted");
                  sleep(2);
                  goto start;
  
-@@ -3007,6 +3071,7 @@ start:
+@@ -3007,6 +3076,7 @@ start:
              LOG("Domain %d has been destroyed.", domid);
              libxl_event_free(ctx, event);
              ret = 0;
-+			libxl_update_state(ctx, domid, "shutdown");
++            libxl_update_state(ctx, domid, "shutdown");
              goto out;
  
          case LIBXL_EVENT_TYPE_DISK_EJECT:
-@@ -3028,6 +3093,7 @@ error_out:
+@@ -3028,6 +3098,7 @@ error_out:
      release_lock();
      if (libxl_domid_valid_guest(domid)) {
          libxl_domain_destroy(ctx, domid, 0);
-+		libxl_update_state(ctx, domid, "shutdown");
++        libxl_update_state(ctx, domid, "shutdown");
          domid = INVALID_DOMID;
      }
  
-@@ -3652,15 +3718,20 @@ static void unpause_domain(uint32_t domi
+@@ -3652,15 +3723,20 @@ static void unpause_domain(uint32_t domi
  static void destroy_domain(uint32_t domid, int force)
  {
      int rc;
 -
-+	libxl_uuid *uuid;
++    libxl_uuid *uuid;
      if (domid == 0 && !force) {
          fprintf(stderr, "Not destroying domain 0; use -f to force.\n"
                          "This can only be done when using a disaggregated "
                          "hardware domain and toolstack.\n\n");
          exit(-1);
      }
-+	
-+	rc = libxl_domid_to_uuid(ctx, &uuid, domid);
-+	if(rc) {fprintf(stderr, "domid to uuid failed during domain destroy\n"); exit(-1);}
++    
++    rc = libxl_domid_to_uuid(ctx, &uuid, domid);
++    if(rc) {fprintf(stderr, "domid to uuid failed during domain destroy\n"); exit(-1);}
 +
      rc = libxl_domain_destroy(ctx, domid, 0);
      if (rc) { fprintf(stderr,"destroy failed (rc=%d)\n",rc); exit(-1); }
-+	libxl_update_state_direct(ctx, *uuid, "shutdown");
++    libxl_update_state_direct(ctx, *uuid, "shutdown");
  }
  
  static void wait_for_domain_deaths(libxl_evgen_domain_death **deathws, int nr)
-@@ -3695,6 +3766,39 @@ static void wait_for_domain_deaths(libxl
+@@ -3695,6 +3771,39 @@ static void wait_for_domain_deaths(libxl
      }
  }
  
@@ -820,20 +854,20 @@ Index: xen-4.6.1/tools/libxl/xl_cmdimpl.c
  static void shutdown_domain(uint32_t domid,
                              libxl_evgen_domain_death **deathw,
                              libxl_ev_user for_user,
-@@ -3703,6 +3807,7 @@ static void shutdown_domain(uint32_t dom
+@@ -3703,6 +3812,7 @@ static void shutdown_domain(uint32_t dom
      int rc;
  
      fprintf(stderr, "Shutting down domain %d\n", domid);
-+	libxl_update_state(ctx, domid, "shutdowning");
++    libxl_update_state(ctx, domid, "shutdowning");
      rc=libxl_domain_shutdown(ctx, domid);
      if (rc == ERROR_NOPARAVIRT) {
          if (fallback_trigger) {
-@@ -3735,12 +3840,14 @@ static void reboot_domain(uint32_t domid
+@@ -3735,12 +3845,14 @@ static void reboot_domain(uint32_t domid
      int rc;
  
      fprintf(stderr, "Rebooting domain %d\n", domid);
-+	libxl_update_state(ctx, domid, "rebooting");
-+	libxl_set_reboot(ctx, domid, 1);
++    libxl_update_state(ctx, domid, "rebooting");
++    libxl_set_reboot(ctx, domid, 1);
      rc=libxl_domain_reboot(ctx, domid);
      if (rc == ERROR_NOPARAVIRT) {
          if (fallback_trigger) {
@@ -844,7 +878,7 @@ Index: xen-4.6.1/tools/libxl/xl_cmdimpl.c
          } else {
              fprintf(stderr, "PV control interface not available:"
                      " external graceful reboot not possible.\n");
-@@ -4779,6 +4886,43 @@ int main_destroy(int argc, char **argv)
+@@ -4779,6 +4891,43 @@ int main_destroy(int argc, char **argv)
      return 0;
  }
  
@@ -888,7 +922,7 @@ Index: xen-4.6.1/tools/libxl/xl_cmdimpl.c
  static int main_shutdown_or_reboot(int do_reboot, int argc, char **argv)
  {
      const char *what = do_reboot ? "reboot" : "shutdown";
-@@ -6318,6 +6462,51 @@ int main_domname(int argc, char **argv)
+@@ -6318,6 +6467,51 @@ int main_domname(int argc, char **argv)
      return 0;
  }
  
@@ -940,7 +974,7 @@ Index: xen-4.6.1/tools/libxl/xl_cmdimpl.c
  int main_rename(int argc, char **argv)
  {
      uint32_t domid;
-@@ -6368,7 +6557,15 @@ int main_trigger(int argc, char **argv)
+@@ -6368,7 +6562,15 @@ int main_trigger(int argc, char **argv)
          }
      }
  
