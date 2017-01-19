@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # Copyright (c) 2013 Citrix Systems, Inc.
 # 
@@ -22,14 +22,25 @@
 #        1 otherwise
 # A return status of 1 indicates the TPM driver is not loaded.
 # In this state the TPM is disabled ... or the platform doesn't have one :)
+
+is_tpm_2_0 () {
+    cat /sys/class/tpm/tpm0/device/description | grep "2.0"
+    return $?
+}
+
 tcsd_start() {
-    local ret=1
-    /etc/init.d/trousers status > /dev/null
-    if [ $? -ne 0 ]; then
-        /etc/init.d/trousers start > /dev/null
-        sleep 1
+    if [[ is_tpm_2_0 -eq 0 ]]; 
+    then
+        resourcemgr &
+    else
+        local ret=1
         /etc/init.d/trousers status > /dev/null
-        [ $? -ne 0 ] && return 1
+        if [ $? -ne 0 ]; then
+            /etc/init.d/trousers start > /dev/null
+            sleep 1
+            /etc/init.d/trousers status > /dev/null
+            [ $? -ne 0 ] && return 1
+        fi
     fi
     return 0
 }
@@ -40,26 +51,37 @@ tcsd_start() {
 tpm_is_active() {
     local ret=0
     local msg=""
-
-    msg=$(tpm_setactive -z -s 2>&1)
-    if [ $? -ne 0 ]; then
-        case "$msg" in
-            *TPM\ is\ deactivated) ret=1 ;;
-            *TPM\ is\ disabled) ret=1 ;;
-            *Authentication\ failed) ;;
-            *No\ SRK) ;;
-            *) ret=2 ;;
-        esac
-    else
-        # If tpm is deactivated we currently don't get here because tcsd returns
-        # an error.  Putting this here for completeness for now.
-        echo "$msg" | while read LINE; do
-            case "$LINE" in
-                *true) ret=1; break ;;
-                *false) ;;
-                *) ret=2; break ;;
+   
+    #Might need to augment tpm2_getcapabilities, but for now this should be sufficient
+    if [[ is_tpm_2_0 -eq 0 ]]; 
+    then
+        msg=$(tpm2_getcapabilities 2>&1)
+        if [ $? -ne 0 ]; then
+            case "$msg" in
+                *Failed\ to\ get) ret=1 ;;
             esac
-        done
+        fi
+    else
+        msg=$(tpm_setactive -z -s 2>&1)
+        if [ $? -ne 0 ]; then
+            case "$msg" in
+                *TPM\ is\ deactivated) ret=1 ;;
+                *TPM\ is\ disabled) ret=1 ;;
+                *Authentication\ failed) ;;
+                *No\ SRK) ;;
+                *) ret=2 ;;
+            esac
+        else
+            # If tpm is deactivated we currently don't get here because tcsd returns
+            # an error.  Putting this here for completeness for now.
+            echo "$msg" | while read LINE; do
+                case "$LINE" in
+                    *true) ret=1; break ;;
+                    *false) ;;
+                    *) ret=2; break ;;
+                esac
+            done
+        fi
     fi
     return $ret
 }
@@ -71,21 +93,31 @@ tpm_is_enabled() {
     local ret=0
     local msg=""
 
-    msg=$(tpm_setenable -z -s 2>&1)
-    if [ $? -ne 0 ]; then
-        case "$msg" in
-            *TPM\ is\ deactivated) ret=1 ;;
-            *TPM\ is\ disabled) ret=1 ;;
-            *Authentication\ failed) ;;
-            *No\ SRK) ;;
-            *) ret=2 ;;
-        esac
+    if [[ is_tpm_2_0 -eq 0 ]]; 
+    then
+        msg=$(tpm2_getcapabilities 2>&1)
+        if [ $? -ne 0 ]; then
+            case "$msg" in
+                *Failed\ to\ get) ret=1 ;;
+            esac
+        fi
     else
-        case "$msg" in
-            Disabled\ status:\ false) ;;
-            Disabled\ status:\ true) ret=1 ;;
-            *) ret=2
-        esac
+        msg=$(tpm_setenable -z -s 2>&1)
+        if [ $? -ne 0 ]; then
+            case "$msg" in
+                *TPM\ is\ deactivated) ret=1 ;;
+                *TPM\ is\ disabled) ret=1 ;;
+                *Authentication\ failed) ;;
+                *No\ SRK) ;;
+                *) ret=2 ;;
+            esac
+        else
+            case "$msg" in
+                Disabled\ status:\ false) ;;
+                Disabled\ status:\ true) ret=1 ;;
+                *) ret=2
+            esac
+        fi
     fi
     return $ret
 }
@@ -97,18 +129,30 @@ tpm_is_owned() {
     local ret=0
     local msg=""
 
-    # want to check tpm_setownable -z -s here but my Dell system always reports
-    #   that the TPM is ownable even when it's not :(
-    # Test is now based on the existance of an SRK which only seems to exist
-    #   when my TPMs are owned.
-    msg=$(echo "data" | tpm_sealdata -z 2>&1)
-    if [ $? -ne 0 ]; then
-        case "$msg" in
-            *TPM\ is\ deactivated) ret=2 ;;
-            *Authentication\ failed) ;;
-            *No\ SRK | *Handle\ is\ incorrect*) ret=1 ;;
-            *) ret=2 ;;
-        esac
+    #TODO: Probably needs some kind of error checking, also maybe switch return value so "owned" == 0, like
+    #this bash function wants to return.
+    if [[ is_tpm_2_0 -eq 0 ]]; 
+    then
+        if [[ $(tpm2_isowned) -eq 1 ]];
+        then
+            ret=0
+        else
+            ret=1
+        fi
+    else 
+        # want to check tpm_setownable -z -s here but my Dell system always reports
+        #   that the TPM is ownable even when it's not :(
+        # Test is now based on the existance of an SRK which only seems to exist
+        #   when my TPMs are owned.
+        msg=$(echo "data" | tpm_sealdata -z 2>&1)
+        if [ $? -ne 0 ]; then
+            case "$msg" in
+                *TPM\ is\ deactivated) ret=2 ;;
+                *Authentication\ failed) ;;
+                *No\ SRK | *Handle\ is\ incorrect*) ret=1 ;;
+                *) ret=2 ;;
+            esac
+        fi
     fi
     return $ret
 }
@@ -120,6 +164,11 @@ tpm_is_owned() {
 tpm_is_owner_wks() {
     local ret=0
     local msg=""
+
+    if [[ is_tpm_2_0 -eq 0 ]]; 
+    then
+        return $ret
+    fi
 
     msg=$(tpm_setenable -z -s 2>&1)
     if [ $? -ne 0 ]; then
@@ -141,6 +190,12 @@ tpm_is_owner_wks() {
 tpm_is_srk_wks() {
     local ret=0
     local msg=""
+
+    if [[ is_tpm_2_0 -eq 0 ]]; 
+    then
+        return $ret
+    fi
+
     msg=$(echo "data" | tpm_sealdata -z 2>&1)
     if [ $? -ne 0 ]; then
         case "$msg" in
@@ -164,15 +219,21 @@ tpm_has_ek() {
     local ret=0
     local msg=""
 
-    msg=$(echo "data" | tpm_sealdata -z 2>&1)
-    if [ $? -ne 0 ]; then
-        case "$msg" in
-            *TPM\ is\ deactivated) ret=2 ;;
-            *TPM\ is\ disabled) ret=2 ;;
-            *No\ SRK | *Authentication\ failed | *Handle\ is\ incorrect) ;;
-            *No\ EK)  ret=1 ;;
-            *) ret=2 ;;
-        esac
+    #tpm2.0 most likely has EK. TODO: figure out if I need to verify this.
+    if [[ is_tpm_2_0 -eq 0 ]]; 
+    then
+        ret=0
+    else
+        msg=$(echo "data" | tpm_sealdata -z 2>&1)
+        if [ $? -ne 0 ]; then
+            case "$msg" in
+                *TPM\ is\ deactivated) ret=2 ;;
+                *TPM\ is\ disabled) ret=2 ;;
+                *No\ SRK | *Authentication\ failed | *Handle\ is\ incorrect) ;;
+                *No\ EK)  ret=1 ;;
+                *) ret=2 ;;
+            esac
+        fi
     fi
     return $ret
 }
@@ -251,8 +312,12 @@ configure_measured_launch()
         rm -f ${key_file}
         return 1
     }
-
-    echo "-p 0 -p 1 -p 2 -p 3 -p 15 -p 17 -p 18 -p 19" > ${root}/config/config.pcrs
+    if [[ is_tpm_2_0 -eq 0 ]]; 
+    then
+        echo "-r 0 -r 1 -r 2 -r 3 -r 15 -r 17 -r 18 -r 19" > ${root}/config/config.pcrs
+    else
+        echo "-p 0 -p 1 -p 2 -p 3 -p 15 -p 17 -p 18 -p 19" > ${root}/config/config.pcrs
+    fi
     mkdir -p ${tpm_dir}
     touch ${tpm_dir}/clear-config-key
     touch ${tpm_dir}/setup
@@ -305,18 +370,30 @@ tpm_configure_gen_passwd () {
             echo "invalid parameter for EK: ${has_ek}" >&2
             return 1
     esac
-    # take ownership of TPM
-    err=$(echo -n "${passwd}" | tpm_takeownership --srk-well-known --stdin 2>&1)
+    
+    if [[ is_tpm_2_0 -eq 0 ]]; 
+    then
+        #Taking endoresement password AND lockout password to fully own tpm
+        err=$(tpm2_takeownership -o "${passwd}" -e "${passwd}" -l "${passwd}" 2>&1)
+    else
+        err=$(echo -n "${passwd}" | tpm_takeownership --srk-well-known --stdin 2>&1)
+    fi
+
     if [ $? -ne 0 ]; then
         echo "error taking ownership of TPM: ${err}" >&2
         return 1
     fi
-    # check to be sure we can seal data with the well-known-key
-    err=$(echo data | tpm_sealdata -z 2>&1 >/dev/null)
-    [ $? -ne 0 ] && {
-        echo "Test to seal data with well-known SRK failed with error: ${err}" >&2
-        return 1
-    }
+
+    #sealing data with wks is tpm 1.2 only
+    if [[ is_tpm_2_0 -eq 1 ]]; 
+    then
+        # check to be sure we can seal data with the well-known-key
+        err=$(echo data | tpm_sealdata -z 2>&1 >/dev/null)
+        [ $? -ne 0 ] && {
+            echo "Test to seal data with well-known SRK failed with error: ${err}" >&2
+            return 1
+        }
+    fi
     return 0
 }
 

@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/bin/sh
 #
 # Copyright (c) 2014 Citrix Systems, Inc.
 # 
@@ -23,6 +23,9 @@
 
 . /etc/init.d/functions
 
+is_tpm_2_0 () {
+    cat /sys/class/tpm/tpm0/device/description | grep "2.0"
+}
 CONFIG_LV=xenclient-config
 STORAGE_LV=xenclient-storage
 STORAGE_DEV=/dev/mapper/${STORAGE_LV}
@@ -166,6 +169,49 @@ The system will now shutdown.
         fi
 }
 
+get_owner_passwd ()
+{
+        local tries=1
+        local OWNERPWD=""
+
+        MEASURED_BOOT=0
+        while [ "${tries}" -le 3 ] ; do
+
+                # Redirection magic because our bash doesn't support |&
+                # redirection of stderr to the pipe without touching stdout
+                maybe_break "recovery-password"
+                OWNERPWD=$(dialog --stdout --colors --no-cancel --insecure \
+--backtitle "${BACK_TITLE}" \
+--passwordbox "
+     Please contact your system administrator
+     or enter the \Zbadministrative passphrase\ZB now
+     to authorize these changes.
+
+     This is ${tries} of 3 passphrase attempts allowed.
+                        " 13 60 | \
+                                openssl rsautl -decrypt \
+                                        -inkey /boot/system/config/recovery-private-key.conf \
+                                        -in /boot/system/config/tpm-owner-passwd.ssl \
+                                        -passin stdin 2>/dev/null)
+                tries=$((tries+1))
+        done
+        if [ "${tries}" -gt 3 ] ; then
+                dialog --stdout --colors \
+                       --backtitle "${BACK_TITLE}" \
+                       --infobox "
+                 \ZbERROR: Incorrect passphrase\ZB
+
+The maximum number of passphrase attempts has been exceeded.
+
+The system will now shutdown.
+                    " 0 0
+                poweroff -f 2>/dev/null
+        fi
+    
+    return $OWNERPWD
+}
+PASSWD=$(get_owner_passwd)
+
 load_modules()
 {
     modprobe usbhid
@@ -209,6 +255,9 @@ restore_firstboot -r ${STORAGE_MNT}
 is_launch_measured
 measured=$?
 
+is_tpm_2_0
+tpm2=$?
+
 # Copy trousers data file to /boot/system.
 PS_FILE_SRC=/usr/share/trousers/system.data.auth
 PS_DIR=/boot/system/tpm
@@ -220,20 +269,23 @@ if [ ! -s ${PS_FILE} ]; then
     install -m 600 -o ${TSS_USER} -g ${TSS_USER} ${PS_FILE_SRC} ${PS_FILE}
 fi
 
+# start daemon if not running
+if [ "${tpm2}" -eq 0 ]; then
+    resourcemgr &
+    sleep 2
+fi
+
 sig=$(dd if="/dev/mapper/${CONFIG_LV}" bs=4 count=1 2>/dev/null)
 case "$sig" in
 LUKS)
-       keycmd="get-config-key"
        slot=0
 
        [ -e /boot/system/tpm/enabled ] && {
-	    keycmd="tpm_unsealdata_sa -i /boot/system/tpm/config.tss"
 	    slot=1
 
             [ -e /boot/system/tpm/setup ] && {
                 MEASURED_BOOT=0
                 # use smbios key and create tss on first tpm enabled boot
-                keycmd="get-config-key"
                 slot=0
                 rm /boot/system/tpm/setup
                 [ "${measured}" -eq 0 ] && tpm_update_tss=yes
@@ -267,8 +319,27 @@ enter the recovery passphrase to continue.
                 }
             fi
         }
-        eval $keycmd | cryptsetup -q -d - -S $slot luksOpen \
-            "/dev/mapper/${CONFIG_LV}" config >/dev/null 2>&1 || \
+        if [ "${tpm2}" -eq 0 && -e /boot/system/tpm/config.tss ];
+        then
+            rm /boot/system/tpm/parent.context
+            tpm2_createprimary -A o -g 0xB -G 0x1 -C /boot/system/tpm/parent.context -P ${PASSWD}
+	        tpm2_unsealdata -c /boot/system/tpm/parent.context -n /boot/system/tpm/config.tss -u /boot/system/tpm/config.tss.pub -g 0xB -r 0 -r 1 -r 2 -r 3 -r 15 -r 17 -r 18 -r 19 -o /boot/system/tpm/unseal.data
+            cat /boot/system/tpm/unseal.data | cryptsetup -q -d - -S $slot luksOpen \
+                "/dev/mapper/${CONFIG_LV}" config > /dev/null 2>&1
+            RETVAL=$?
+            rm /boot/system/tpm/unseal.data
+        elif [ -e /boot/system/tpm/config.tss ];
+        then
+            tpm_unsealdata_sa -i /boot/system/tpm/config.tss | cryptsetup -q -d - -S $slot luksOpen \
+            "/dev/mapper/${CONFIG_LV}" config >/dev/null 2>&1
+            RETVAL=$?
+        else
+            get-config-key | cryptsetup -q -d - -S $slot luksOpen \
+            "/dev/mapper/${CONFIG_LV}" config > /dev/null 2>&1
+            RETVAL=$?
+        fi
+        if [ ! $RETVAL -eq 0 ]; 
+        then
             {
                 if [ "${measured}" -eq 0 ] ; then
 
@@ -307,6 +378,7 @@ enter the recovery passphrase to continue.
                     [ "$OPT" == 0 ] && tpm_update_tss=yes
                 fi
             }
+        fi
         ;;
 *)
 	# We want to do this (for some sort of ref counting)
@@ -332,8 +404,20 @@ fi
         dialog --colors \
                --backtitle "${BACK_TITLE}" \
                --mixedgauge "  Resealing..." 0 0 20
-        SEALOUT=`tpm_sealdata_sa -i /config/keys/config.key \
-                  -o /boot/system/tpm/config.tss -z $(cat /config/config.pcrs) 2>&1`
+        if [ "${tpm2}" -eq 0 ];
+        then
+            if [ -e /boot/system/tpm/config.tss ]; then
+                rm /boot/system/tpm/config.tss
+            fi
+            if [ -e /boot/system/tpm/config.tss.pub ]; then
+                rm /boot/system/tpm/config.tss.pub
+            fi
+            SEALOUT=`tpm2_sealdata -n /boot/system/tpm/parent.context -I /config/keys/config.key -O /boot/system/tpm/config.tss -o /boot/system/tpm/config.tss.pub -g 0xB -G 8 -A o -b 0x492 $(cat /config/config.pcrs) -P ${PASSWD} 2>&1`
+        else
+            SEALOUT=`tpm_sealdata_sa -i /config/keys/config.key \
+                      -o /boot/system/tpm/config.tss -z $(cat /config/config.pcrs) 2>&1`
+        fi
+    
         SEALERR=$?
         if [ $SEALERR -eq 0 ]; then
                 dialog --colors \
@@ -359,9 +443,20 @@ fi
 
 [ -e /boot/system/tpm/clear-config-key ] && {
     # disable smbios key using tpm key to confirm it works
-    tpm_unsealdata_sa -i /boot/system/tpm/config.tss | cryptsetup -q -d - \
-      -S 1 luksKillSlot /dev/mapper/xenclient-config 0 &&
-    rm /boot/system/tpm/clear-config-key
+    if [ "${tpm2}" -eq 0 ];
+    then
+        rm /boot/system/tpm/parent.context
+        tpm2_createprimary -A o -g 0xB -G 0x1 -C /boot/system/tpm/parent.context -P ${PASSWD}
+        tpm2_unsealdata -c /boot/system/tpm/parent.context -n /boot/system/tpm/config.tss -u /boot/system/tpm/config.tss.pub \
+                -g 0xB $(cat /config/config.pcrs) -o /boot/system/tpm/unseal.data
+        cat /boot/system/tpm/unseal.data | cryptsetup -q -d - -S 1 luksKillSlot /dev/mapper/xenclient-config 0 &&
+        rm /boot/system/tpm/unseal.data
+        rm /boot/system/tpm/clear-config-key
+    else
+        tpm_unsealdata_sa -i /boot/system/tpm/config.tss | cryptsetup -q -d - \
+            -S 1 luksKillSlot /dev/mapper/xenclient-config 0 && rm /boot/system/tpm/clear-config-key
+        rm /boot/system/tpm/clear-config-key
+    fi
 }
 
 if [ $MEASURED_BOOT -eq 1 ]; then
@@ -371,7 +466,16 @@ else
 	rm -f /config/tpm/measured-boot
 fi
 
-dd if=/dev/urandom bs=20 count=1 2>/dev/null | TCSD_LOG_OFF=yes tpm_extendpcr_sa -p 15
+if [ "${tpm2}" -eq 0 ];
+then
+    #default to using sha256 (algorithmID = 0xB) here. Consequently, bs for dd should be 32
+    #TODO: make this configurable (ie sha1 or sha256). However, important to note that sha1 has found several collisions.
+    DIGEST=$(dd if=/dev/urandom bs=32 count=1 2>/dev/null)
+    tpm2_extendpcr -c 15 -g 0xB -s $DIGEST
+else
+    dd if=/dev/urandom bs=20 count=1 2>/dev/null | TCSD_LOG_OFF=yes tpm_extendpcr_sa -p 15
+fi
+
 
 unload_modules
 

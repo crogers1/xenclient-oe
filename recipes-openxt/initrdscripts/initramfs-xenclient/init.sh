@@ -27,6 +27,14 @@ ROOT_READONLY=
 DEFINIT=/sbin/init
 FIRSTBOOT_FLAG=/boot/system/firstboot
 
+is_tpm_2_0 () {
+    cat /sys/class/tpm/tpm0/device/description | grep "2.0"
+}
+
+is_resourcemgr_up () {
+    ps aux | grep resourcemgr | grep -v busybox
+}
+
 early_setup() {
     mkdir -p /proc /sys /mnt /tmp
     mount -t proc proc /proc
@@ -170,9 +178,28 @@ tpm_setup() {
     insmod /lib/modules/$(uname -r)/kernel/drivers/char/tpm/tpm_tis.ko
     mknod /dev/tpm0 c 10 224
     echo -n "initramfs measuring $ROOT_DEVICE: "
-    s=$(sha1sum $ROOT_DEVICE)
-    echo $s
-    echo -n ${s:0:40} | TCSD_LOG_OFF=yes tpm_extendpcr_sa -p 15
+   
+    is_tpm_2_0
+    RET=$?
+    if [ "$RET" -eq 0 ];
+    then 
+        echo "Measuring for tpm 2.0"
+        is_resourcemgr_up
+        RET=$?
+        if [ "$RET" -eq 1 ];
+        then
+            resourcemgr &
+        fi
+        s=$(sha256sum $ROOT_DEVICE)
+        echo $s
+        DIGEST=$(echo -n ${s:0:64})
+        tpm2_extendpcr -c 15 -g 0xB -s $DIGEST
+    else
+        s=$(sha1sum $ROOT_DEVICE)
+        echo $s
+        echo -n ${s:0:40} | TCSD_LOG_OFF=yes tpm_extendpcr_sa -p 15
+    fi
+    
 }
 
 
