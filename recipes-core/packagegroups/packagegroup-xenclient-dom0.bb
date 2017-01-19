@@ -116,6 +116,11 @@ RDEPENDS_${PN} = " \
     xenmgr \
     xen-xenstore \
     xen-xenstored-c \
+    libtss2 \
+    libtctidevice \
+    libtctisocket \
+    resourcemgr \
+    tpm2.0-tools \
 "
 
 # OE upgrade - temporarly disabled:
