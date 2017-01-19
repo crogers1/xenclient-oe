@@ -105,6 +105,11 @@ RDEPENDS_${PN} = " \
     linuxfb-surfman-plugin \
     dm-agent \
     xenmgr \
+    libtss2 \
+    libtctidevice \
+    libtctisocket \
+    resourcemgr \
+    tpm2.0-tools \
 "
 
 # OE upgrade - temporarly disabled:

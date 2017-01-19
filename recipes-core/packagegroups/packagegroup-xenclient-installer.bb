@@ -56,6 +56,11 @@ RDEPENDS_${PN} = " \
     xenclient-tpm-scripts \
     ncurses \
     intel-microcode \
+    libtss2 \
+    libtctidevice \
+    libtctisocket \
+    resourcemgr \
+    tpm2.0-tools \
 "
 
 # open-iscsi-user \
