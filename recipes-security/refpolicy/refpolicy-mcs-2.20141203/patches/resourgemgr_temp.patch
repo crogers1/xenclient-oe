@@ -1,0 +1,7 @@
+--- refpolicy/policy/modules/contrib/tcsd.fc	2017-01-10 13:44:48.885014222 -0500
++++ refpolicy/policy/modules/contrib/tcsd.fc	2017-01-10 13:46:50.101885844 -0500
+@@ -6,3 +6,4 @@
+ /var/lib/tpm(/.*)?	gen_context(system_u:object_r:tcsd_var_lib_t,s0)
+ /etc/tcsd\.conf	--	gen_context(system_u:object_r:tcsd_etc_t,s0)
+ /boot/system/tpm(/.*)?	gen_context(system_u:object_r:tcsd_var_lib_t,s0)
++/usr/sbin/resourcemgr -- gen_context(system_u:object_r:tcsd_exec_t,s0)
