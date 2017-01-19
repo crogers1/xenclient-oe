@@ -17,6 +17,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
+. /usr/lib/tpm-scripts/tpm-functions
+
 # LUKS Key Slots 
 RSLOT=0
 ESLOT=1
@@ -72,7 +74,7 @@ password_prompt() {
 
     while [ 0 ] ; do
         local capture="${KEYDIR}/${key}"
-        dialog --cancel-label Previous --insecure --passwordbox \
+        dialog --no-cancel --insecure --passwordbox \
             "Please enter a new password for ${request}" 0 50 "" 2>${capture} 1>&3
 
         local ret=$?
@@ -83,7 +85,7 @@ password_prompt() {
         fi
 
         local repeat=$(mktemp -p ${KEYDIR})
-        dialog --cancel-label Previous --insecure --passwordbox \
+        dialog --no-cancel --insecure --passwordbox \
             "Please enter the same password to confirm" 0 50 "" 2>${repeat} 1>&3
 
         local ret=$?
@@ -309,7 +311,9 @@ gen_device_key() {
 get_own_key() {
     local key_file=""
 
-    key_file=$(password_prompt "TPM Own")
+    show_cursor
+    key_file=$(password_prompt "TPM Own" "own")
+    hide_cursor
 
     echo ${key_file}
 }
@@ -507,8 +511,21 @@ encrypted_unlock() {
     local name="${2}"
     local key_file="${3}"
 
-    tpm_unsealdata_sa -z -i $key_file | \
-        cryptsetup -q -d - -S ${ESLOT} luksOpen "${part}" "${name}" >/dev/null 2>&1
+    is_tpm_2_0
+    local tpm2=$?
+    if [ "${tpm2}" -eq 0 ]; 
+    then
+        local passwd_file=$(get_tpm_passwd)
+        rm /boot/system/tpm/parent.context
+        tpm2_createprimary -A o -g 0xB -G 0x1 -C /boot/system/tpm/parent.context -P 2>&1 < ${passwd_file}
+        tpm2_unsealdata -c /boot/system/tpm/parent.context -n "${key_file}" -u "${key_file}.pub" -g 0xB -r 0 -r 1 -r 2 -r 3 -r 15 -r 17 -r 18 -r 19 2>/dev/null | cryptsetup -q -d - -S ${ESLOT} luksOpen "${part}" "${name}" >/dev/null 2>&1
+        if keystore_ready; then
+            close_keystore
+        fi
+    else
+        tpm_unsealdata_sa -z -i $key_file | \
+            cryptsetup -q -d - -S ${ESLOT} luksOpen "${part}" "${name}" >/dev/null 2>&1
+    fi
 
     return $?
 }

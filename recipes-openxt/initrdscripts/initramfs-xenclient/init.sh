@@ -27,6 +27,14 @@ ROOT_READONLY=
 DEFINIT=/sbin/init
 FIRSTBOOT_FLAG=/boot/system/firstboot
 
+is_tpm_2_0 () {
+    cat /sys/class/tpm/tpm0/device/description | grep "2.0"
+}
+
+is_resourcemgr_up () {
+    ps -x | grep resourcemgr | grep -v busybox
+}
+
 early_setup() {
     mkdir -p /proc /sys /mnt /tmp
     mount -t proc proc /proc
@@ -165,11 +173,28 @@ fatal() {
 tpm_setup() {
     CMDLINE="ro measured" read_args
     modprobe tpm_tis
-    echo -n "initramfs measuring $ROOT_DEVICE ...  "
-    s=$(sha1sum $ROOT_DEVICE)
-    echo "done"
-    echo -n ${s:0:40} | TCSD_LOG_OFF=yes tpm_extendpcr_sa -p 15
-    [ $? -ne 0 ] && fatal "PCR-15 extend failed"
+    is_tpm_2_0
+    RET=$?
+    if [ "$RET" -eq 0 ];
+    then 
+        echo "Measuring for tpm 2.0"
+        is_resourcemgr_up
+        RET=$?
+        if [ "$RET" -eq 1 ];
+        then
+            resourcemgr &
+            ifconfig lo up
+        fi
+        s=$(sha256sum $ROOT_DEVICE)
+        echo $s
+        DIGEST=$(echo -n ${s:0:64})
+        tpm2_extendpcr -c 15 -g 0xB -s $DIGEST
+    else
+        s=$(sha1sum $ROOT_DEVICE)
+        echo "done"
+        echo -n ${s:0:40} | TCSD_LOG_OFF=yes tpm_extendpcr_sa -p 15
+        [ $? -ne 0 ] && fatal "PCR-15 extend failed"
+    fi
 }
 
 

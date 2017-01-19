@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/bin/sh
 #
 # Copyright (c) 2014 Citrix Systems, Inc.
 # Copyright (c) 2016 Daniel P. Smith, Apertus Solutions, LLC
@@ -24,7 +24,11 @@
 
 . /etc/init.d/functions
 . /usr/lib/openxt/key-functions
+. /usr/lib/tpm-scripts/tpm-functions
 
+is_tpm_2_0 () {
+    cat /sys/class/tpm/tpm0/device/description | grep "2.0"
+}
 CONFIG_LV=xenclient-config
 STORAGE_LV=xenclient-storage
 STORAGE_DEV=/dev/mapper/${STORAGE_LV}
@@ -177,9 +181,24 @@ seal()
     dialog --colors --backtitle "${BACK_TITLE}" --mixedgauge \
         "  Sealing..." 0 0 20
 
-    local sealout=$(tpm_sealdata_sa -i /config/keys/config.key \
-        -o ${tss_file} -z $(cat /config/config.pcrs) 2>&1)
-    local sealerr=$?
+    is_tpm_2_0
+    local tpm2=$?
+
+    local passwd_file=$(get_tpm_passwd)
+
+    if [ "${tpm2}" -eq 0 ];
+    then
+        clean_old_tpm_files
+        local sealout=$(tpm2_sealdata -n /boot/system/tpm/parent.context -I /config/keys/config.key -O ${tss_file} -o ${tss_file}.pub -g 0xB -G 0x8 -A o -b 0x492 $(cat /config/config.pcrs) -P  2>&1 < ${passwd_file})
+        local sealerr=$?
+        if keystore_ready; then
+            close_keystore
+        fi
+    else
+        local sealout=$(tpm_sealdata_sa -i /config/keys/config.key \
+            -o ${tss_file} -z $(cat /config/config.pcrs) 2>&1)
+        local sealerr=$?
+    fi
 
     if [ $sealerr -eq 0 ]; then
         dialog --colors --backtitle "${BACK_TITLE}" --mixedgauge \
@@ -260,7 +279,6 @@ unlock_config()
                 touch ${measured_flag}
                 return 0
             }
-
             maybe_break "measure-fail"
 
             # store PCR hints for recovery
@@ -366,6 +384,9 @@ restore_firstboot -r ${STORAGE_MNT}
 is_launch_measured
 measured=$?
 
+is_tpm_2_0
+tpm2=$?
+
 # Copy trousers data file to /boot/system.
 if [ ! -s ${PS_FILE} ]; then
     install -m 700 -o ${TSS_USER} -g ${TSS_USER} -d ${PS_DIR}
@@ -375,13 +396,27 @@ fi
 
 load_modules
 
+# start daemon if not running
+if [ "${tpm2}" -eq 0 ]; then
+    resourcemgr &
+    sleep 3
+    ifconfig lo up
+fi
 # Attempt to unlock config, ignore return code but in future may be used
 # for setting up a recovery shell
 unlock_config
 
 restore_firstboot -r /config
 
-echo -n "MEASUREDLAUNCHCLOSED" | TCSD_LOG_OFF=yes tpm_extendpcr_sa -p 15
+if [ "${tpm2}" -eq 0 ];
+then
+    #default to using sha256 (algorithmID = 0xB) here. Consequently, bs for dd should be 32
+    #TODO: make this configurable (ie sha1 or sha256). However, important to note that sha1 has found several collisions.
+    tpm2_extendpcr -c 15 -g 0xB -s "MEASUREDLAUNCHCLOSED"
+else
+    echo -n "MEASUREDLAUNCHCLOSED" | TCSD_LOG_OFF=yes tpm_extendpcr_sa -p 15
+fi
+
 
 unload_modules
 

@@ -12,6 +12,13 @@
     exit 1
 }
 
+
+tpm2=$(is_tpm_2_0)
+if [ "${tpm2}" -eq 0 ];
+then
+    resourcemgr &
+fi
+
 err() {
     echo "seal-system: $1" >&2
     exit 1
@@ -61,9 +68,20 @@ done
 
 case $operation in
 seal)
-    sealout=$(tpm_sealdata_sa -i ${config_key} \
-        -o ${sealed_key} -z $(cat ${pcr_list}) 2>&1)
-    sealerr=$?
+    local passwd_file=$(get_tpm_passwd)
+    if [ "${tpm2}" -eq 0 ];
+    then
+        clean_old_tpm_files
+        sealout=$(tpm2_sealdata -n /boot/system/tpm/parent.context -I ${config_key} -O ${sealed_key} -o ${sealed_key}.pub -g 0xB -G 8 -A o -b 0x492 $(cat /config/config.pcrs) -P "${passwd}" 2>&1 < ${passwd_file})
+        sealerr=$?
+        if keystore_ready; then
+            close_keystore
+        fi
+    else
+        sealout=$(tpm_sealdata_sa -i ${config_key} \
+            -o ${sealed_key} -z $(cat ${pcr_list}) 2>&1)
+        sealerr=$?
+    fi
 
     if [ $sealerr -eq 0 ]; then
         # store PCR hints for recovery
@@ -76,6 +94,7 @@ seal)
     fi
 ;;
 forward)
+
     pcrs=$(calculate_pcrs "/" /boot/system/grub/grub.cfg) ||
         err "failed to calculate pcrs"
 
@@ -83,11 +102,16 @@ forward)
     pcr18=$(echo $pcrs | awk '{ print $2 }')
     pcr19=$(echo $pcrs | awk '{ print $3 }')
 
+    if [ "${tpm2}" -eq 0 ]; then
+        shaalg="sha256sum"
+    else
+        shaalg="sha1sum"
+    fi 
     # During early init, rootfs is hashed and is given to
     # tpm_extend which hashes the rootfs hash and hands that value
     # to the TPM to be extended into PCR 15
-    root_hash=$(sha1sum ${root_dev}|cut -f1 -d' ')
-    pcr15=$(hash_extend 0 $(echo -n ${root_hash}|sha1sum|cut -f1 -d' ')) ||
+    root_hash=$(${shaalg} ${root_dev}|cut -f1 -d' ')
+    pcr15=$(hash_extend 0 $(echo -n ${root_hash}|${shaalg}|cut -f1 -d' ')) ||
         err "failed to hash root device"
 
     if [ -e "${sealed_key}" ]; then
