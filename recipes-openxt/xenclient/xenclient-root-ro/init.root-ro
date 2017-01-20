@@ -183,9 +183,7 @@ get_owner_passwd ()
                 OWNERPWD=$(dialog --stdout --colors --no-cancel --insecure \
 --backtitle "${BACK_TITLE}" \
 --passwordbox "
-     Please contact your system administrator
-     or enter the \Zbadministrative passphrase\ZB now
-     to authorize these changes.
+     Please enter the admin password to authorize these tpm operations.
 
      This is ${tries} of 3 passphrase attempts allowed.
                         " 13 60 | \
@@ -193,6 +191,11 @@ get_owner_passwd ()
                                         -inkey /boot/system/config/recovery-private-key.conf \
                                         -in /boot/system/config/tpm-owner-passwd.ssl \
                                         -passin stdin 2>/dev/null)
+                ret=$?
+                if [ "${ret}" -eq 0 ];
+                then
+                    break;
+                fi
                 tries=$((tries+1))
         done
         if [ "${tries}" -gt 3 ] ; then
@@ -208,7 +211,7 @@ The system will now shutdown.
                 poweroff -f 2>/dev/null
         fi
     
-    return $OWNERPWD
+    echo "$OWNERPWD"
 }
 PASSWD=$(get_owner_passwd)
 
@@ -271,8 +274,10 @@ fi
 
 # start daemon if not running
 if [ "${tpm2}" -eq 0 ]; then
+    echo "TPM 2.0, starting resourcemgr"
     resourcemgr &
-    sleep 2
+    sleep 3
+    ifconfig lo up
 fi
 
 sig=$(dd if="/dev/mapper/${CONFIG_LV}" bs=4 count=1 2>/dev/null)
@@ -319,10 +324,10 @@ enter the recovery passphrase to continue.
                 }
             fi
         }
-        if [ "${tpm2}" -eq 0 && -e /boot/system/tpm/config.tss ];
+        if [ "${tpm2}" -eq 0 -a -e /boot/system/tpm/config.tss ];
         then
             rm /boot/system/tpm/parent.context
-            tpm2_createprimary -A o -g 0xB -G 0x1 -C /boot/system/tpm/parent.context -P ${PASSWD}
+            tpm2_createprimary -A o -g 0xB -G 0x1 -C /boot/system/tpm/parent.context -P "${PASSWD}"
 	        tpm2_unsealdata -c /boot/system/tpm/parent.context -n /boot/system/tpm/config.tss -u /boot/system/tpm/config.tss.pub -g 0xB -r 0 -r 1 -r 2 -r 3 -r 15 -r 17 -r 18 -r 19 -o /boot/system/tpm/unseal.data
             cat /boot/system/tpm/unseal.data | cryptsetup -q -d - -S $slot luksOpen \
                 "/dev/mapper/${CONFIG_LV}" config > /dev/null 2>&1
@@ -412,7 +417,7 @@ fi
             if [ -e /boot/system/tpm/config.tss.pub ]; then
                 rm /boot/system/tpm/config.tss.pub
             fi
-            SEALOUT=`tpm2_sealdata -n /boot/system/tpm/parent.context -I /config/keys/config.key -O /boot/system/tpm/config.tss -o /boot/system/tpm/config.tss.pub -g 0xB -G 8 -A o -b 0x492 $(cat /config/config.pcrs) -P ${PASSWD} 2>&1`
+            SEALOUT=`tpm2_sealdata -n /boot/system/tpm/parent.context -I /config/keys/config.key -O /boot/system/tpm/config.tss -o /boot/system/tpm/config.tss.pub -g 0xB -G 8 -A o -b 0x492 $(cat /config/config.pcrs) -P "${PASSWD}" 2>&1`
         else
             SEALOUT=`tpm_sealdata_sa -i /config/keys/config.key \
                       -o /boot/system/tpm/config.tss -z $(cat /config/config.pcrs) 2>&1`
@@ -446,7 +451,7 @@ fi
     if [ "${tpm2}" -eq 0 ];
     then
         rm /boot/system/tpm/parent.context
-        tpm2_createprimary -A o -g 0xB -G 0x1 -C /boot/system/tpm/parent.context -P ${PASSWD}
+        tpm2_createprimary -A o -g 0xB -G 0x1 -C /boot/system/tpm/parent.context -P "${PASSWD}"
         tpm2_unsealdata -c /boot/system/tpm/parent.context -n /boot/system/tpm/config.tss -u /boot/system/tpm/config.tss.pub \
                 -g 0xB $(cat /config/config.pcrs) -o /boot/system/tpm/unseal.data
         cat /boot/system/tpm/unseal.data | cryptsetup -q -d - -S 1 luksKillSlot /dev/mapper/xenclient-config 0 &&

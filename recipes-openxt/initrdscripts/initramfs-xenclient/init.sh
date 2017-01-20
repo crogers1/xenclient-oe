@@ -32,7 +32,7 @@ is_tpm_2_0 () {
 }
 
 is_resourcemgr_up () {
-    ps aux | grep resourcemgr | grep -v busybox
+    ps -x | grep resourcemgr | grep -v busybox
 }
 
 early_setup() {
@@ -189,6 +189,7 @@ tpm_setup() {
         if [ "$RET" -eq 1 ];
         then
             resourcemgr &
+            ifconfig lo up
         fi
         s=$(sha256sum $ROOT_DEVICE)
         echo $s
