@@ -56,14 +56,20 @@ Index: xen-4.6.4/tools/libxl/libxl_blktap2.c
  {
      const char *type;
      char *params, *devname = NULL;
-@@ -40,6 +41,11 @@ char *libxl__blktap_devpath(libxl__gc *g
+@@ -40,6 +41,17 @@ char *libxl__blktap_devpath(libxl__gc *g
              return devname;
      }
  
 +	if(!keydir || !strcmp(keydir, ""))
 +	    setenv("TAPDISK2_CRYPTO_KEYDIR", "/config/platform-crypto-keys", 1);
 +	else
-+		setenv("TAPDISK2_CRYPTO_KEYDIR", keydir, 1);
++	{	char *keydirs = NULL;
++		keydirs = libxl__sprintf(gc, "/config/platform-crypto-keys,%s", keydir);
++		if(keydirs)
++			setenv("TAPDISK2_CRYPTO_KEYDIR", keydirs, 1);
++		else
++			setenv("TAPDISK2_CRYPTO_KEYDIR", "/config/platform-crypto-keys", 1);
++	}
 +
      params = libxl__sprintf(gc, "%s:%s", type, disk);
      err = tap_ctl_create(params, &devname);
