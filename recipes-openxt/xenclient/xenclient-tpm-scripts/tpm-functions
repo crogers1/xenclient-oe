@@ -25,30 +25,6 @@
 
 . /usr/lib/openxt/key-functions
 
-is_tpm_2_0 () {
-    cat /sys/class/tpm/tpm0/device/description | grep "2.0"
-    return $?
-}
-
-get_tpm_passwd () {
-    if ! keystore_ready; then
-        setup_keystore
-    fi
-    local capture="${KEYDIR}/own"
-    dialog --stdout --backtitle "OpenXT Measured Launch Security" --insecure --colors --passwordbox "
-    This is the only attempt.
-
-    Please enter the TPM owner password " 0 0 2>${capture}
-    local ret=$?
-
-    if [ ${ret} -ne 0 ]; then
-        rm -f ${capture}
-        return ${ret}
-    fi
-
-    echo ${capture}
-}
-
 clean_old_tpm_files () {
     [ -e /boot/system/tpm/parent.context ] && rm /boot/system/tpm/parent.context
     [ -e /boot/system/tpm/config.tss ] && rm /boot/system/tpm/config.tss
@@ -346,7 +322,7 @@ tpm_forward_seal() {
     if [ "${tpm2}" -eq 0 ];
     then 
         local passwd_file=$(get_tpm_passwd)
-        tpm2_sealdata -n /boot/system/tpm/parent.context -I ${key} -f -O ${tss} -o ${tss}.pub -g 0xB -G 8 -A o -b 0x492 ${pcrs} -P 2>&1 < ${passwd_file}
+        tpm2_sealdata -n /boot/system/tpm/parent.context -I ${key} -f -O ${tss} -o ${tss}.pub -g 0xB -G 8 -A o -b 0x492 ${pcrs} -P < ${passwd_file} 2>&1
         if keystore_ready; then
            close_keystore
         fi 

@@ -17,7 +17,12 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-. /usr/lib/tpm-scripts/tpm-functions
+
+is_tpm_2_0 () {
+    cat /sys/class/tpm/tpm0/device/description | grep "2.0"
+    return $?
+}
+
 
 # LUKS Key Slots 
 RSLOT=0
@@ -117,6 +122,28 @@ password_prompt() {
     done
 
     exec 3>&-
+    echo ${capture}
+}
+
+get_tpm_passwd () {
+    if ! keystore_ready; then
+        setup_keystore
+    fi
+    local capture="${KEYDIR}/own"
+    local well_known="00000000000000000000000000000000"
+
+    #dialog --stdout --backtitle "OpenXT Measured Launch Security" --insecure --colors --passwordbox "
+    #This is the only attempt.
+
+    #Please enter the TPM owner password " 0 0 "" 2>${capture}
+    #local ret=$?
+
+    #if [ ${ret} -ne 0 ]; then
+    #    rm -f ${capture}
+    #    return ${ret}
+    #fi
+
+    echo ${well_known} > ${capture}
     echo ${capture}
 }
 
@@ -312,7 +339,8 @@ get_own_key() {
     local key_file=""
 
     show_cursor
-    key_file=$(password_prompt "TPM Own" "own")
+    #key_file=$(password_prompt "TPM Own" "own")
+    key_file=$(get_tpm_passwd)
     hide_cursor
 
     echo ${key_file}
@@ -517,7 +545,7 @@ encrypted_unlock() {
     then
         local passwd_file=$(get_tpm_passwd)
         rm /boot/system/tpm/parent.context
-        tpm2_createprimary -A o -g 0xB -G 0x1 -C /boot/system/tpm/parent.context -P 2>&1 < ${passwd_file}
+        tpm2_createprimary -A o -g 0xB -G 0x1 -C /boot/system/tpm/parent.context -P < ${passwd_file} 2>&1
         tpm2_unsealdata -c /boot/system/tpm/parent.context -n "${key_file}" -u "${key_file}.pub" -g 0xB -r 0 -r 1 -r 2 -r 3 -r 15 -r 17 -r 18 -r 19 2>/dev/null | cryptsetup -q -d - -S ${ESLOT} luksOpen "${part}" "${name}" >/dev/null 2>&1
         if keystore_ready; then
             close_keystore
