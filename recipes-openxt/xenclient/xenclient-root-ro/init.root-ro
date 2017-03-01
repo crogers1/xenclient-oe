@@ -396,12 +396,6 @@ fi
 
 load_modules
 
-# start daemon if not running
-if [ "${tpm2}" -eq 0 ]; then
-    resourcemgr &
-    sleep 3
-    ifconfig lo up
-fi
 # Attempt to unlock config, ignore return code but in future may be used
 # for setting up a recovery shell
 unlock_config

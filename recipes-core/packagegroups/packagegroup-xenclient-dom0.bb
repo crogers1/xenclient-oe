@@ -119,7 +119,6 @@ RDEPENDS_${PN} = " \
     libtss2 \
     libtctidevice \
     libtctisocket \
-    resourcemgr \
     tpm2.0-tools \
 "
 

@@ -34,10 +34,8 @@ clean_old_tpm_files () {
 tcsd_start() {
     is_tpm_2_0
     local tpm2=$?
-    if [ "${tpm2}" -eq 0 ]; 
+    if [ "${tpm2}" -ne 0 ]; 
     then
-        resourcemgr &
-    else
         local ret=1
         /etc/init.d/trousers status > /dev/null
         if [ $? -ne 0 ]; then

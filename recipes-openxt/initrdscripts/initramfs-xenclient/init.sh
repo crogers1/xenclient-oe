@@ -31,10 +31,6 @@ is_tpm_2_0 () {
     cat /sys/class/tpm/tpm0/device/description | grep "2.0"
 }
 
-is_resourcemgr_up () {
-    ps -x | grep resourcemgr | grep -v busybox
-}
-
 early_setup() {
     mkdir -p /proc /sys /mnt /tmp
     mount -t proc proc /proc
@@ -178,13 +174,6 @@ tpm_setup() {
     if [ "$RET" -eq 0 ];
     then 
         echo "Measuring for tpm 2.0"
-        is_resourcemgr_up
-        RET=$?
-        if [ "$RET" -eq 1 ];
-        then
-            resourcemgr &
-            ifconfig lo up
-        fi
         s=$(sha256sum $ROOT_DEVICE)
         echo $s
         DIGEST=$(echo -n ${s:0:64})

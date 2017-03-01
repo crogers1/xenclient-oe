@@ -13,12 +13,6 @@
 }
 
 
-tpm2=$(is_tpm_2_0)
-if [ "${tpm2}" -eq 0 ];
-then
-    resourcemgr &
-fi
-
 err() {
     echo "seal-system: $1" >&2
     exit 1
