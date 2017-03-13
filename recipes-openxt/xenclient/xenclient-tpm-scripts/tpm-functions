@@ -26,7 +26,6 @@
 . /usr/lib/openxt/key-functions
 
 clean_old_tpm_files () {
-    [ -e /boot/system/tpm/parent.context ] && rm /boot/system/tpm/parent.context
     [ -e /boot/system/tpm/config.tss ] && rm /boot/system/tpm/config.tss
     [ -e /boot/system/tpm/config.tss.pub ] && rm /boot/system/tpm/config.tss.pub
 }
@@ -256,6 +255,10 @@ tpm_take_ownership() {
     then
         #Taking endoresement password AND lockout password to fully own tpm
         err=$(tpm2_takeownership -o "${passwd}" -e "${passwd}" -l "${passwd}" 2>&1)
+        #Create our primary object
+        handle=$(echo -n "${passwd}" | tpm2_createprimary -A o -g 0xB -G 0x1 -P | grep Handle | cut -d ':' -f 2) 
+        #Make it permanent for this measured install
+        err=$(tpm2_evictcontrol -A o -H ${handle} -S 0x81000000 -P "${passwd}" 2>&1)
     else
         # take ownership of TPM
         err=$(cat "${passwd}" | tpm_takeownership --srk-well-known --stdin 2>&1)
@@ -319,11 +322,8 @@ tpm_forward_seal() {
 
     if [ "${tpm2}" -eq 0 ];
     then 
-        local passwd_file=$(get_tpm_passwd)
-        tpm2_sealdata -n /boot/system/tpm/parent.context -I ${key} -f -O ${tss} -o ${tss}.pub -g 0xB -G 8 -A o -b 0x492 ${pcrs} -P < ${passwd_file} 2>&1
-        if keystore_ready; then
-           close_keystore
-        fi 
+        clean_old_tpm_files
+        tpm2_sealdata -H 0x81000000 -I ${key} -f -O ${tss} -o ${tss}.pub -g 0xB -G 8 -A o -b 0x492 ${pcrs} 2>&1
         return $?
     else
         /etc/init.d/trousers status > /dev/null 2>&1

@@ -543,14 +543,8 @@ encrypted_unlock() {
     local tpm2=$?
     if [ "${tpm2}" -eq 0 ]; 
     then
-        local passwd_file=$(get_tpm_passwd)
-        rm /boot/system/tpm/parent.context
-        tpm2_createprimary -A o -g 0xB -G 0x1 -C /boot/system/tpm/parent.context -P < ${passwd_file} 2>&1
-        tpm2_unsealdata -c /boot/system/tpm/parent.context -n "${key_file}" -u "${key_file}.pub" -g 0xB -r 0 -r 1 -r 2 -r 3 -r 15 -r 17 -r 18 -r 19 2>/dev/null | cryptsetup -q -d - -S ${ESLOT} luksOpen "${part}" "${name}" >/dev/null 2>&1
+        tpm2_unsealdata -H 0x81000000 -n "${key_file}" -u "${key_file}.pub" -g 0xB -r 0 -r 1 -r 2 -r 3 -r 15 -r 17 -r 18 -r 19 2>/dev/null | cryptsetup -q -d - -S ${ESLOT} luksOpen "${part}" "${name}" >/dev/null 2>&1
         ret=$?
-        if keystore_ready; then
-            close_keystore
-        fi
     else
         tpm_unsealdata_sa -z -i $key_file | \
             cryptsetup -q -d - -S ${ESLOT} luksOpen "${part}" "${name}" >/dev/null 2>&1

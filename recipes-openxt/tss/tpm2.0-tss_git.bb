@@ -19,7 +19,7 @@ SRC_URI = " \
 S = "${WORKDIR}/${@d.getVar('BPN',d).upper()}"
 
 # https://lists.yoctoproject.org/pipermail/yocto/2013-November/017042.html
-SRCREV = "${AUTOREV}"
+SRCREV = "56fec897d55873dbf8677fa0cfdc2144c14412b3"
 PVBASE := "${PV}"
 PV = "${PVBASE}.${SRCPV}"
 
@@ -38,14 +38,20 @@ PACKAGES = " \
     resourcemgr \
 "
 
-FILES_libtss2 = "${libdir}/libsapi.so.0.0.0"
+FILES_libtss2 = " \
+    ${libdir}/libsapi.so.0.0.0 \
+    ${libdir}/libsapi.so.0.0.0 \
+"
 FILES_libtss2-dev = " \
     ${includedir}/sapi \
     ${includedir}/tcti/common.h \
+    #${libdir}/libmarshal.so* \
     ${libdir}/libsapi.so* \
     ${libdir}/pkgconfig/sapi.pc \
 "
 FILES_libtss2-staticdev = " \
+    #${libdir}/libmarshal.a \
+    #${libdir}/libmarshal.la \
     ${libdir}/libsapi.a \
     ${libdir}/libsapi.la \
 "

@@ -62,15 +62,11 @@ done
 
 case $operation in
 seal)
-    local passwd_file=$(get_tpm_passwd)
     if [ "${tpm2}" -eq 0 ];
     then
         clean_old_tpm_files
-        sealout=$(tpm2_sealdata -n /boot/system/tpm/parent.context -I ${config_key} -O ${sealed_key} -o ${sealed_key}.pub -g 0xB -G 8 -A o -b 0x492 $(cat /config/config.pcrs) -P < ${passwd_file} 2>&1)
+        sealout=$(tpm2_sealdata -H 0x81000000 -I ${config_key} -O ${sealed_key} -o ${sealed_key}.pub -g 0xB -G 8 -A o -b 0x492 $(cat /config/config.pcrs) 2>&1)
         sealerr=$?
-        if keystore_ready; then
-            close_keystore
-        fi
     else
         sealout=$(tpm_sealdata_sa -i ${config_key} \
             -o ${sealed_key} -z $(cat ${pcr_list}) 2>&1)
