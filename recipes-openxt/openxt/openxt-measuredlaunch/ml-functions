@@ -132,7 +132,7 @@ hash_extend() {
 
     [[ $first == 0 ]] && first=${default_first}
     [[ $(echo -n $first|wc -c) -ne ${size} ]] && return 1
-    [[ $(echo -n $second|wc -c) -ne${size} ]] && return 1
+    [[ $(echo -n $second|wc -c) -ne ${size} ]] && return 1
     echo -n $first | hex2bin >$buffer
     echo -n $second | hex2bin >>$buffer
 

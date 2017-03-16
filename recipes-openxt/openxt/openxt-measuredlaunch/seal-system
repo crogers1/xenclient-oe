@@ -21,6 +21,9 @@ err() {
 # Globals
 TPM_DEV="$(find /sys/class -name tpm0)/device"
 
+is_tpm_2_0
+tpm2=$?
+
 # Configurables
 operation="seal"
 config_key="/config/keys/config.key"

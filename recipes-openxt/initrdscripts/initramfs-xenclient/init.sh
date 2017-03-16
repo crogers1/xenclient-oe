@@ -28,7 +28,7 @@ DEFINIT=/sbin/init
 FIRSTBOOT_FLAG=/boot/system/firstboot
 
 is_tpm_2_0 () {
-    cat /sys/class/tpm/tpm0/device/description | grep "2.0"
+    [ -e /sys/class/tpm/tpm0/device/description ] && cat /sys/class/tpm/tpm0/device/description | grep "2.0" &>/dev/null
 }
 
 early_setup() {

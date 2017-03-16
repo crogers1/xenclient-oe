@@ -19,10 +19,8 @@
 
 
 is_tpm_2_0 () {
-    cat /sys/class/tpm/tpm0/device/description | grep "2.0"
-    return $?
+   [ -e /sys/class/tpm/tpm0/device/description ] && cat /sys/class/tpm/tpm0/device/description | grep "2.0" &>/dev/null
 }
-
 
 # LUKS Key Slots 
 RSLOT=0

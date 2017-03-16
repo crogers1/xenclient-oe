@@ -254,7 +254,7 @@ tpm_take_ownership() {
     if [ "${tpm2}" -eq 0 ]; 
     then
         #Taking endoresement password AND lockout password to fully own tpm
-        err=$(tpm2_takeownership -o "${passwd}" -e "${passwd}" -l "${passwd}" 2>&1)
+        err=$(tpm2_takeownership -o "${passwd}" -e "${passwd}" 2>&1)
         #Create our primary object
         handle=$(echo -n "${passwd}" | tpm2_createprimary -A o -g 0xB -G 0x1 -P | grep Handle | cut -d ':' -f 2) 
         #Make it permanent for this measured install
