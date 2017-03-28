@@ -204,7 +204,12 @@ seal()
         #  do PCR quote
         if [ "${PCR_DEV}" ]; then
             [ -f "${PCRS_BAD}" ] && rm "${PCRS_BAD}"
-            cat "${PCR_DEV}/device/pcrs" > "${PCRS_GOOD}"
+            if [ "${tpm2}" -eq 0 ];
+            then
+                tpm2_listpcrs > "${PCRS_GOOD}"
+            else
+                cat "${PCR_DEV}/device/pcrs" > "${PCRS_GOOD}"
+            fi
         fi
 
         poweroff -r
@@ -240,6 +245,8 @@ unlock_config()
     local measured_flag="/config/tpm/measured-boot"
 
     local sig=$(dd if="${lv_path}" bs=4 count=1 2>/dev/null)
+    is_tpm_2_0
+    local tpm2=$?
     case "$sig" in
     LUKS)
         if [ -e /boot/system/tpm/enabled ]; then
@@ -279,7 +286,12 @@ unlock_config()
 
             # store PCR hints for recovery
             #  do PCR quote
-            [ -d "${PCR_DEV}" ] && cat "${PCR_DEV}/device/pcrs" > "${PCRS_BAD}"
+            if [ "${tpm2}" -eq 0 ];
+            then
+                [ -d "${PCR_DEV}" ] && tpm2_listpcrs > "${PCRS_BAD}"
+            else
+                [ -d "${PCR_DEV}" ] && cat "${PCR_DEV}/device/pcrs" > "${PCRS_BAD}"
+            fi
 
             recovery
             [ -f ${measured_flag} ] && rm -f ${measured_flag}

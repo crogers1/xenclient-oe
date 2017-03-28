@@ -80,7 +80,12 @@ seal)
         # store PCR hints for recovery
         if [ -d "${TPM_DEV}" ]; then
             [ -f "${bad_pcrs}" ] && rm "${bad_pcrs}"
-            cat "${TPM_DEV}/pcrs" > "${good_pcrs}"
+            if [ "${tpm2}" -eq 0 ];
+            then
+                tpm2_listpcrs > "${good_pcrs}"
+            else
+                cat "${TPM_DEV}/pcrs" > "${good_pcrs}"
+            fi
         fi
 
         exit 0
