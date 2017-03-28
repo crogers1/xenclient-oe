@@ -315,7 +315,7 @@ generate_policy() {
 
     [ -f $policy ] && rm -f $policy
 
-    tb_polgen --create --type nonfatal --ctrl 1 $policy 2>&1 1>/dev/null && \
+    tb_polgen --create --type nonfatal --ctrl 1 --alg sha256 $policy 2>&1 1>/dev/null && \
     tb_polgen --add --num 0 --pcr none --hash any $policy 2>&1 1>/dev/null && \
     tb_polgen --add --num any --pcr 19 --hash any $policy 2>&1 1>/dev/null
     if [ $? -ne 0 ]; then
