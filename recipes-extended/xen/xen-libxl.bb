@@ -29,8 +29,7 @@ python () {
     # After renaming a variable, it is simpler to append to it here:
     d.appendVar("FILES_xen-xl", " /etc/init.d/xen-init-dom0")
     # OpenXT uses init scripts rather than systemd.
-    d.appendVar("FILES_xen-xenstored", " /etc/init.d/xenstored")
-    d.appendVar("FILES_xen-xenstored", " /etc/xen/oxenstored.conf")
+    d.appendVar("FILES_xen-xenstored", " /etc/init.d/xenstored ${libdir}/libxenstore.so.* ${sbindir}/xenstored /*/*/xenstored")
 }
 
 DEPENDS += " \
@@ -38,14 +37,11 @@ DEPENDS += " \
     xen \
     xen-blktap \
     libnl \
-    ocaml-cross \
     "
-EXTRA_OECONF_remove = "--disable-ocamltools"
 
 SRC_URI_append = " \
     file://xen-init-dom0.initscript \
     file://xenstored.initscript \
-    file://oxenstored.conf \
     "
 
 PACKAGES = " \
@@ -94,20 +90,12 @@ do_configure_prepend() {
 
 do_compile() {
     oe_runmake -C tools subdir-all-include
+	oe_runmake -C tools subdir-all-libxc
+	oe_runmake -C tools subdir-all-xenstore
     oe_runmake LDLIBS_libxenctrl='-lxenctrl' \
-		       LDLIBS_libxenstore='-lxenstore' \
 		       LDLIBS_libblktapctl='-lblktapctl' \
 		       LDLIBS_libxenguest='-lxenguest' \
 		       -C tools subdir-all-libxl
-    oe_runmake V=1 \
-       CC="${CC_FOR_OCAML}" \
-       EXTRA_CFLAGS_XEN_TOOLS="${TARGET_CC_ARCH} --sysroot=${STAGING_DIR_TARGET}" \
-       LDFLAGS="${TARGET_CC_ARCH} --sysroot=${STAGING_DIR_TARGET}" \
-       LDLIBS_libxenctrl='-lxenctrl' \
-       LDLIBS_libxenstore='-lxenstore' \
-       LDLIBS_libblktapctl='-lblktapctl' \
-       LDLIBS_libxenguest='-lxenguest' \
-       -C tools subdir-all-ocaml
 }
 
 do_install() {
@@ -116,11 +104,7 @@ do_install() {
     install -m 0755 ${WORKDIR}/xen-init-dom0.initscript \
                     ${D}${sysconfdir}/init.d/xen-init-dom0
 
-    oe_runmake DESTDIR=${D} -C tools/ocaml/xenstored install
-    mv ${D}/usr/sbin/oxenstored ${D}/${sbindir}/xenstored
+	oe_runmake DESTDIR=${D} -C tools subdir-install-xenstore
     install -m 0755 ${WORKDIR}/xenstored.initscript \
                     ${D}${sysconfdir}/init.d/xenstored
-    rm ${D}${sysconfdir}/xen/oxenstored.conf
-    install -m 0644 ${WORKDIR}/oxenstored.conf \
-                    ${D}${sysconfdir}/xen/oxenstored.conf
 }
