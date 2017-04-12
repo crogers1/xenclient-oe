@@ -1,9 +1,7 @@
 require recipes-extended/xen/xen.inc
 require xen-common.inc
 
-inherit findlib
-
-DESCRIPTION = "Xen hypervisor libxl, ocaml and xenstore components"
+DESCRIPTION = "Xen hypervisor libxl and xenstore components"
 
 # In OpenXT, multiple recipes are used to build Xen and its components:
 # a 32-bit build of tools ; a 64-bit hypervisor ; a separate blktap
@@ -51,6 +49,7 @@ SRC_URI_append = " \
     "
 
 PACKAGES = " \
+    ${PN}-dbg \
     xen-xl \
     xen-libxl-dev \
     xen-libxlutil \
@@ -59,22 +58,12 @@ PACKAGES = " \
     xen-libxenlight-dev \
     xen-libxl-staticdev \
     xen-xenstored \
-    xen-ocaml-libs-dev \
-    xen-ocaml-libs-dbg \
-    xen-ocaml-libs-staticdev \
-    xen-ocaml-libs \
-    ${PN}-dbg \
     "
 
 FILES_${PN}-staticdev = " \
     ${libdir}/libxlutil.a \
     ${libdir}/libxenlight.a \
     "
-
-FILES_xen-ocaml-libs-dev = "${ocamllibdir}/*/*.so"
-FILES_xen-ocaml-libs-dbg = "${ocamllibdir}/*/.debug/*"
-FILES_xen-ocaml-libs-staticdev = "${ocamllibdir}/*/*.a"
-FILES_xen-ocaml-libs = "${ocamllibdir}/*"
 
 EXTRA_OEMAKE += "CROSS_SYS_ROOT=${STAGING_DIR_HOST} CROSS_COMPILE=${HOST_PREFIX}"
 EXTRA_OEMAKE += "CONFIG_IOEMU=n"
@@ -127,8 +116,7 @@ do_install() {
     install -m 0755 ${WORKDIR}/xen-init-dom0.initscript \
                     ${D}${sysconfdir}/init.d/xen-init-dom0
 
-    oe_runmake DESTDIR=${D} -C tools/ocaml install
-
+    oe_runmake DESTDIR=${D} -C tools/ocaml/xenstored install
     mv ${D}/usr/sbin/oxenstored ${D}/${sbindir}/xenstored
     install -m 0755 ${WORKDIR}/xenstored.initscript \
                     ${D}${sysconfdir}/init.d/xenstored
