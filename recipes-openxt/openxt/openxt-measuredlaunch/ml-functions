@@ -148,7 +148,7 @@ pcr17() {
     local tpm2=$?
 
     if [ "${tpm2}" -eq 0 ]; then
-        pcr17=$(tpm2_listpcrs -g 0xb | grep PCR_17 | cut -f2 -d: | tr -d ' ' | td -d '\n')
+        pcr17=$(tpm2_listpcrs -g 0xb | grep PCR_17 | cut -f2 -d: | tr -d ' ' | tr -d '\n')
     else
         local root="${1:-/}"
         local pcr17=''
@@ -242,7 +242,13 @@ pcr19() {
         fi
 
         if $(echo ${module} | egrep -q -e '\.bin$|\.BIN$'); then
-            finger=$(head -c 8 ${root}/${module}|sha1sum|head -c 7)
+            is_tpm_2_0
+            tpm2=$?
+            if [ "${tpm2}" -eq 0 ]; then
+                finger=$(head -c 8 ${root}/${module}|sha256sum|head -c 7)
+            else
+                finger=$(head -c 8 ${root}/${module}|sha1sum|head -c 7)
+            fi
             if [ "$finger" = "c22c443" ]; then
                 continue
             fi

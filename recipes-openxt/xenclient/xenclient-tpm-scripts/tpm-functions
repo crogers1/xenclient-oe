@@ -323,7 +323,7 @@ tpm_forward_seal() {
     if [ "${tpm2}" -eq 0 ];
     then 
         clean_old_tpm_files
-        tpm2_sealdata -H 0x81000000 -I ${key} -f -O ${tss} -o ${tss}.pub -g 0xB -G 8 -A o -b 0x492 ${pcrs} 2>&1
+        tpm2_sealdata -H 0x81000000 -I ${key} -O ${tss} -o ${tss}.pub -g 0xB -G 8 -A o -b 0x492 ${pcrs} 2>&1
         return $?
     else
         /etc/init.d/trousers status > /dev/null 2>&1
