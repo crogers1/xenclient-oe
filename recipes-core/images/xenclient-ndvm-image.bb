@@ -45,7 +45,6 @@ IMAGE_INSTALL = "\
     v4v-module \
     xen-libxenstore \
     xen-xenstore \
-    xen-ocaml-libs \
     wget \
     ethtool \
     carrier-detect \

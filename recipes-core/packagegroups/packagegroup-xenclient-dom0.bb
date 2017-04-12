@@ -23,7 +23,6 @@ RDEPENDS_${PN} = " \
     xen-libxenlight \
     xen-libxenstat \
     xen-libxlutil \
-    xen-ocaml-libs \
     xen-xenstat \
     xen-xenstored \
     xen-xl \
