@@ -16,7 +16,8 @@ SRC_URI = "http://downloads.sourceforge.net/tboot/tboot-${PV}.tar.gz \
            file://tpm-reserve-mmio-region.patch \
            file://add-a-PCR-calculator-to-predict-measurements.patch \
            file://tb-polgen-tpm-2.0.patch \
-		   file://tpm2-extpol-sha256.patch \
+           file://tpm2-extpol-sha256.patch \
+		   file://tpm2-pcr-calc.patch \
            "
 
 SRC_URI[md5sum] = "7946ed861628fab1e6d5e35fbcc5d614"
