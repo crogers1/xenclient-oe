@@ -174,10 +174,17 @@ fail_first_seal()
     exit 1
 }
 
+#For TPM2.0, we perform 'layered' sealing. For a set of supported hashing algorithms, we seal
+#the config key against the first, and provide the blob as input to the next seal operation in the set.
+#One benefit of this approach is the ability to detect platform changes in the event firmware
+#does not extend its measurements to all pcr banks. At the time of writing, the Intel Computestick
+#is one platform that exhibits this behavior. See the TPM 2.0 documentation for more details.
 seal()
 {
     local tss_file=${1}
-
+    local sealerr=0
+    local sealout=""
+    local seal_file="/config/keys/config.key"
     maybe_break "seal"
     dialog --colors --backtitle "${BACK_TITLE}" --mixedgauge \
         "  Sealing..." 0 0 20
@@ -188,15 +195,22 @@ seal()
     if [ "${tpm2}" -eq 0 ];
     then
         clean_old_tpm_files
-        local sealout=$(tpm2_sealdata -H 0x81000000 -I /config/keys/config.key -O ${tss_file} -o ${tss_file}.pub -g 0xB -G 0x8 -A o -b 0x492 $(cat /config/config.pcrs) 2>&1 )
-        local sealerr=$?
+        if pcr_bank_exists "TPM_ALG_SHA1"; then
+            sealout=$(tpm2_sealdata -H 0x81000001 -I ${seal_file} -O ${tss_file} -o ${tss_file}.pub.sha1 -g 0x4 -G 0x8 -A o -b 0x492 $(cat /config/config.pcrs) 2>&1 )
+            sealerr=$?
+            seal_file=${tss_file}
+        fi
+        if pcr_bank_exists "TPM_ALG_SHA256" && [ $sealerr -eq 0 ]; then
+            sealout=$(tpm2_sealdata -H 0x81000000 -I ${seal_file} -O ${tss_file} -o ${tss_file}.pub.sha256 -g 0xB -G 0x8 -A o -b 0x492 $(cat /config/config.pcrs) 2>&1 )
+            sealerr=$?
+        fi
     else
-        local sealout=$(tpm_sealdata_sa -i /config/keys/config.key \
+        sealout=$(tpm_sealdata_sa -i /config/keys/config.key \
             -o ${tss_file} -z $(cat /config/config.pcrs) 2>&1)
-        local sealerr=$?
+        sealerr=$?
     fi
 
-    if [ $sealerr -eq 0 ]; then
+    if [ $sealerr -eq 0 ] && [ -e ${tss_file} ]; then
         dialog --colors --backtitle "${BACK_TITLE}" --mixedgauge \
             "  Sealing: Done" 0 0 100
 
@@ -412,9 +426,9 @@ restore_firstboot -r /config
 
 if [ "${tpm2}" -eq 0 ];
 then
-    #default to using sha256 (algorithmID = 0xB) here. Consequently, bs for dd should be 32
-    #TODO: make this configurable (ie sha1 or sha256). However, important to note that sha1 has found several collisions.
-    tpm2_extendpcr -c 15 -g 0xB -s "MEASUREDLAUNCHCLOSED"
+    #cap pcr 15 in all available banks. This is a cheap operation and works for all cases
+    pcr_bank_exists "TPM_ALG_SHA256" && tpm2_extendpcr -c 15 -g 0xB -s "MEASUREDLAUNCHCLOSED"
+    pcr_bank_exists "TPM_ALG_SHA1" && tpm2_extendpcr -c 15 -g 0x4 -s "MEASUREDLAUNCHCLOSED"
 else
     echo -n "MEASUREDLAUNCHCLOSED" | TCSD_LOG_OFF=yes tpm_extendpcr_sa -p 15
 fi

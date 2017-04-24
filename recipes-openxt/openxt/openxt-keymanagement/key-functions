@@ -22,6 +22,19 @@ is_tpm_2_0 () {
    [ -e /sys/class/tpm/tpm0/device/description ] && cat /sys/class/tpm/tpm0/device/description | grep "2.0" &>/dev/null
 }
 
+pcr_bank_exists () {
+    local alg_in=$1
+
+    banks=$(tpm2_listpcrs -s | cut -d ':' -f 2)
+    for bank in $banks; do
+        alg=$(echo $bank | cut -d '(' -f 1)
+        if [ "$alg" = $alg_in ]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
 # LUKS Key Slots 
 RSLOT=0
 ESLOT=1
@@ -532,6 +545,11 @@ platform_unlock() {
     return $?
 }
 
+#For TPM 2.0, we perform 'layered' unsealing. In the opposite order of the seal, we attempt
+#to unseal the encrypted blob for each hash alg in the set of supported algs of the tpm. The output
+#is always tried against cryptsetup in event that the sealed blob is the only layer.
+#(ie. TPM supports ONLY sha256, and doesn't expose sha1 or other hash algs). The code could be simplified
+#if the unsealed output is redirected to a file, but we never want to risk storing the decrypted key on disk.
 encrypted_unlock() {
     local part="${1}"
     local name="${2}"
@@ -541,8 +559,23 @@ encrypted_unlock() {
     local tpm2=$?
     if [ "${tpm2}" -eq 0 ]; 
     then
-        tpm2_unsealdata -H 0x81000000 -n "${key_file}" -u "${key_file}.pub" -g 0xB -r 0 -r 1 -r 2 -r 3 -r 15 -r 17 -r 18 -r 19 2>/dev/null | cryptsetup -q -d - -S ${ESLOT} luksOpen "${part}" "${name}" >/dev/null 2>&1
-        ret=$?
+        local unseal_file=${key_file}
+        #try unsealing, if failed, its possibly a rolled up blob, try the next alg in the series
+        if pcr_bank_exists "TPM_ALG_SHA256"; then
+            tpm2_unsealdata -H 0x81000000 -n "${unseal_file}" -u "${key_file}.pub.sha256" -g 0xB -r 0 -r 1 -r 2 -r 3 -r 15 -r 17 -r 18 -r 19 | cryptsetup -q -d - -S ${ESLOT} luksOpen "${part}" "${name}" >/dev/null 2>&1
+            ret=$?
+            if [ $ret -eq 0 ]; then
+                return $ret
+            else
+                 tpm2_unsealdata -H 0x81000000 -n "${unseal_file}" -u "${key_file}.pub.sha256" -g 0xB -r 0 -r 1 -r 2 -r 3 -r 15 -r 17 -r 18 -r 19 > "${key_file}.tmp"
+                unseal_file="${key_file}.tmp"
+            fi
+        fi
+        if pcr_bank_exists "TPM_ALG_SHA1"; then
+            tpm2_unsealdata -H 0x81000001 -n "${unseal_file}" -u "${key_file}.pub.sha1" -g 0x4 -r 0 -r 1 -r 2 -r 3 -r 15 -r 17 -r 18 -r 19 | cryptsetup -q -d - -S ${ESLOT} luksOpen "${part}" "${name}" >/dev/null 2>&1
+            ret=$?
+        fi
+        [ -e "${key_file}.tmp" ] && rm "${key_file}.tmp"
     else
         tpm_unsealdata_sa -z -i $key_file | \
             cryptsetup -q -d - -S ${ESLOT} luksOpen "${part}" "${name}" >/dev/null 2>&1

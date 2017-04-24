@@ -30,6 +30,18 @@ clean_old_tpm_files () {
     [ -e /boot/system/tpm/config.tss.pub ] && rm /boot/system/tpm/config.tss.pub
 }
 
+alg_to_handle () {
+    alg=$1
+    case $alg in
+        0x000b)
+            echo "0x81000000"
+            ;;
+        0x0004)
+            echo "0x81000001"
+            ;;
+    esac
+}
+
 tcsd_start() {
     is_tpm_2_0
     local tpm2=$?
@@ -223,6 +235,33 @@ tpm_has_ek() {
     return $ret
 }
 
+#Taking ownership for tpm2 is slightly more complicated. Encapsulate this process
+#in its own function, checking err after each critical operation.
+tpm2_ownership () {
+    passwd=$1
+
+    #Taking endoresement password AND lockout password to fully own tpm
+    err=$(tpm2_takeownership -o "${passwd}" -e "${passwd}" 2>&1)
+    ret=$?
+    [ ${ret} -ne 0 ] && echo ${err} && return ${ret}
+
+    banks=$(tpm2_listpcrs -s | cut -d ':' -f 2)
+    ret=$?
+    [ ${ret} -ne 0 ] && echo "Failed to list pcr banks" && return ${ret}
+    #Create our primary object
+    for bank in $banks; do
+        alg=$(echo $bank | cut -d '(' -f 2 | cut -d ')' -f 1)
+        handle=$(echo -n "${passwd}" | tpm2_createprimary -A o -g ${alg} -G 0x1 -P | grep Handle | cut -d ':' -f 2)
+        ret=$?
+        [ ${ret} -ne 0 ] && echo "Failed to create primary" && return ${ret}
+        #Make it permanent for this measured install
+        err=$(tpm2_evictcontrol -A o -H ${handle} -S $(alg_to_handle ${alg}) -P "${passwd}" 2>&1)
+        ret=$?
+        [ ${ret} -ne 0 ] && echo ${err} && return ${ret}
+    done
+    return 0
+}
+
 # Function to take ownership of the TPM.  Wraps some common functionality to
 #   create an EK and check that we can seal with the well-known SRK.
 # parameter 0: password
@@ -253,12 +292,7 @@ tpm_take_ownership() {
     
     if [ "${tpm2}" -eq 0 ]; 
     then
-        #Taking endoresement password AND lockout password to fully own tpm
-        err=$(tpm2_takeownership -o "${passwd}" -e "${passwd}" 2>&1)
-        #Create our primary object
-        handle=$(echo -n "${passwd}" | tpm2_createprimary -A o -g 0xB -G 0x1 -P | grep Handle | cut -d ':' -f 2) 
-        #Make it permanent for this measured install
-        err=$(tpm2_evictcontrol -A o -H ${handle} -S 0x81000000 -P "${passwd}" 2>&1)
+        err=$(tpm2_ownership ${passwd})
     else
         # take ownership of TPM
         err=$(cat "${passwd}" | tpm_takeownership --srk-well-known --stdin 2>&1)
@@ -322,9 +356,21 @@ tpm_forward_seal() {
 
     if [ "${tpm2}" -eq 0 ];
     then 
+        seal_file=${key}
         clean_old_tpm_files
-        tpm2_sealdata -H 0x81000000 -I ${key} -O ${tss} -o ${tss}.pub -g 0xB -G 8 -A o -b 0x492 ${pcrs} 2>&1
-        return $?
+        if pcr_bank_exists "TPM_ALG_SHA1"; then
+            tpm2_sealdata -H 0x81000001 -I ${seal_file} -O ${tss} -o ${tss}.pub.sha1 -g 0x4 -G 8 -A o -b 0x492 ${pcrs} 2>&1
+            err=$?
+            seal_file=${tss}
+            if [ $err -ne 0 ]; then return $err; fi
+        fi
+        if pcr_bank_exists "TPM_ALG_SHA256"; then
+            tpm2_sealdata -H 0x81000000 -I ${seal_file} -O ${tss} -o ${tss}.pub.sha256 -g 0xB -G 8 -A o -b 0x492 ${pcrs} 2>&1
+            err=$?
+            if [ $err -ne 0 ]; then return $err; fi
+        fi
+        [ -e ${tss} ] && return 0
+        return 1
     else
         /etc/init.d/trousers status > /dev/null 2>&1
         if [ $? -ne 0 ]; then

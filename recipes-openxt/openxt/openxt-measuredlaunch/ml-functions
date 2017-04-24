@@ -23,6 +23,12 @@
     exit 1
 }
 
+get_preferred_alg () {
+    pcr_bank_exists "TPM_ALG_SHA256" && echo "sha256" && return 0
+    pcr_bank_exists "TPM_ALG_SHA1" && echo "sha1" && return 0
+    return 1
+}
+
 hex2bin() {
     read hex
     echo -n $hex | sed 's/\([0-9A-F]\{2\}\)/\\\\\\x\1/gI' | xargs printf
@@ -174,14 +180,8 @@ pcr18() {
     is_tpm_2_0
     local tpm2=$?
     local IFS=$'\n'
-    local hash_alg=''
+    local hash_alg="sha1" #default to sha1 for legacy
     mod_num=0
-
-    if [ "${tpm2}" -eq 0 ]; then
-        hash_alg="sha256"
-    else
-        hash_alg="sha1"
-    fi
 
     for  modline in $modules; do
         args=""
@@ -200,7 +200,9 @@ pcr18() {
         0)
             cmdline=$(echo ${cmdline} | sed -e 's/FIXME\s*//')
             if [ "${tpm2}" -eq 0 ]; then
-                mlehash=$(lcp2_mlehash --create --cmdline "${cmdline}" --alg sha256 ${root}/${module} | tr -d ' ') 
+                hash_alg=$(get_preferred_alg)
+                [ $? -ne 0 ] && echo "No valid algs available" && return 1
+                mlehash=$(lcp2_mlehash --create --cmdline "${cmdline}" --alg $hash_alg ${root}/${module} | tr -d ' ') 
             else
                 mlehash=$(lcp_mlehash -c "${cmdline}" ${root}/${module}|tr -d ' ')
             fi
@@ -329,11 +331,14 @@ calculate_pcrs() {
 generate_policy() {
     local password=$(cat $1)
     local policy=/tmp/tboot.vl
+    local hash_alg="sha1" #default to sha1 for legacy support
 
     is_tpm_2_0
     tpm2=$?
 
     if [ "${tpm2}" -eq 0 ]; then
+        hash_alg=$(get_preferred_alg)
+        [ $? -ne 0 ] && echo "No valid algs available" && return 1
         local tboot_idx='0x01200001'
     else
         local tboot_idx='0x20000001'
@@ -341,7 +346,7 @@ generate_policy() {
 
     [ -f $policy ] && rm -f $policy
 
-    tb_polgen --create --type nonfatal --ctrl 1 --alg sha256 $policy 2>&1 1>/dev/null && \
+    tb_polgen --create --type nonfatal --ctrl 1 --alg $hash_alg $policy 2>&1 1>/dev/null && \
     tb_polgen --add --num 0 --pcr none --hash any $policy 2>&1 1>/dev/null && \
     tb_polgen --add --num any --pcr 19 --hash any $policy 2>&1 1>/dev/null
     if [ $? -ne 0 ]; then
