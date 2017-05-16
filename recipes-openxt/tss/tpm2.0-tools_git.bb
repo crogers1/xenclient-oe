@@ -4,8 +4,8 @@ SECTION = "tpm"
 
 LICENSE = "BSD"
 LIC_FILES_CHKSUM = "file://${S}/LICENSE;md5=91b7c548d73ea16537799e8060cea819"
-DEPENDS = "tpm2.0-tss openssl curl"
-SRC_URI = "git://github.com/crogers1/tpm2.0-tools.git;protocol=git;branch=upstream-rebase-v3;name=tpm2.0-tools;destsuffix=tpm2.0-tools"
+DEPENDS = "tpm2.0-tss openssl curl autoconf-archive pkgconfig"
+SRC_URI = "git://github.com/crogers1/tpm2.0-tools.git;protocol=git;branch=upstream-rebase-v4;name=tpm2.0-tools;destsuffix=tpm2.0-tools"
 
 S = "${WORKDIR}/tpm2.0-tools"
 # https://lists.yoctoproject.org/pipermail/yocto/2013-November/017042.html
@@ -22,7 +22,7 @@ do_configure_prepend () {
 	# execute the bootstrap script
 	currentdir=$(pwd)
 	cd ${S}
-	./bootstrap --force
+	ACLOCAL="aclocal --system-acdir=${STAGING_DATADIR}/aclocal" ./bootstrap
 	cd ${currentdir}
 	oe_runconf
 }

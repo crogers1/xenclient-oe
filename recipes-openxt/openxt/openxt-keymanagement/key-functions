@@ -554,28 +554,33 @@ encrypted_unlock() {
     local part="${1}"
     local name="${2}"
     local key_file="${3}"
+    local ret=0
 
     is_tpm_2_0
     local tpm2=$?
     if [ "${tpm2}" -eq 0 ]; 
     then
         local unseal_file=${key_file}
-        #try unsealing, if failed, its possibly a rolled up blob, try the next alg in the series
+        #try unsealing for all pcr banks
         if pcr_bank_exists "TPM_ALG_SHA256"; then
-            tpm2_unsealdata -H 0x81000000 -n "${unseal_file}" -u "${key_file}.pub.sha256" -g 0xB -r 0 -r 1 -r 2 -r 3 -r 15 -r 17 -r 18 -r 19 | cryptsetup -q -d - -S ${ESLOT} luksOpen "${part}" "${name}" >/dev/null 2>&1
-            ret=$?
-            if [ $ret -eq 0 ]; then
-                return $ret
-            else
-                 tpm2_unsealdata -H 0x81000000 -n "${unseal_file}" -u "${key_file}.pub.sha256" -g 0xB -r 0 -r 1 -r 2 -r 3 -r 15 -r 17 -r 18 -r 19 > "${key_file}.tmp"
-                unseal_file="${key_file}.tmp"
-            fi
-        fi
-        if pcr_bank_exists "TPM_ALG_SHA1"; then
-            tpm2_unsealdata -H 0x81000001 -n "${unseal_file}" -u "${key_file}.pub.sha1" -g 0x4 -r 0 -r 1 -r 2 -r 3 -r 15 -r 17 -r 18 -r 19 | cryptsetup -q -d - -S ${ESLOT} luksOpen "${part}" "${name}" >/dev/null 2>&1
+            tpm2_unsealdata -H 0x81000000 -n "${unseal_file}.sha256" -u "${key_file}.pub.sha256" -g 0xB -r 0 -r 1 -r 2 -r 3 -r 15 -r 17 -r 18 -r 19 >/dev/null 2>&1
             ret=$?
         fi
-        [ -e "${key_file}.tmp" ] && rm "${key_file}.tmp"
+        if pcr_bank_exists "TPM_ALG_SHA1" && [ ${ret} -eq 0 ]; then
+            tpm2_unsealdata -H 0x81000001 -n "${unseal_file}.sha1" -u "${key_file}.pub.sha1" -g 0x4 -r 0 -r 1 -r 2 -r 3 -r 15 -r 17 -r 18 -r 19 >/dev/null 2>&1
+            ret=$?
+        fi
+        #unsealing failed, return the error
+        [ ${ret} -ne 0 ] && echo "Unsealing failed" && return ${ret}
+
+        #now try to unlock the config partition, only need to unseal one blob
+        if [ -e ${unseal_file}.sha256 ]; then
+            tpm2_unsealdata -H 0x81000000 -n "${unseal_file}.sha256" -u "${key_file}.pub.sha256" -g 0xB -r 0 -r 1 -r 2 -r 3 -r 15 -r 17 -r 18 -r 19 | cryptsetup -q -d - -S ${ESLOT} luksOpen "${part}" "${name}" >/dev/null 2>&1 
+            ret=$?
+        elif [ -e ${unseal_file}.sha1 ]; then
+            tpm2_unsealdata -H 0x81000001 -n "${unseal_file}.sha1" -u "${key_file}.pub.sha1" -g 0x4 -r 0 -r 1 -r 2 -r 3 -r 15 -r 17 -r 18 -r 19 | cryptsetup -q -d - -S ${ESLOT} luksOpen "${part}" "${name}" >/dev/null 2>&1
+            ret=$?
+        fi 
     else
         tpm_unsealdata_sa -z -i $key_file | \
             cryptsetup -q -d - -S ${ESLOT} luksOpen "${part}" "${name}" >/dev/null 2>&1
