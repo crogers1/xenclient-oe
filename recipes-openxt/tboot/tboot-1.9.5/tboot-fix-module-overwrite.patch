@@ -1,0 +1,52 @@
+--- loader.c.old	2017-07-05 16:50:57.502503869 -0400
++++ loader.c	2017-07-05 16:51:01.054532246 -0400
+@@ -825,9 +825,14 @@
+  */
+ static bool move_modules_above_elf_kernel(loader_ctx *lctx, elf_header_t *kernel_image)
+ {
++    uint64_t max_ram_base = 0,
++             max_ram_size = 0;
++    uint32_t memRequired = 0;
++
+     if (LOADER_CTX_BAD(lctx))
+         return false;
+ 
++    uint32_t module_count = get_module_count(lctx);
+     /* get end address of loaded elf image */
+     void *elf_start=NULL, *elf_end=NULL;
+     if ( !get_elf_image_range(kernel_image, &elf_start, &elf_end) )
+@@ -838,16 +843,32 @@
+     printk(TBOOT_INFO"ELF kernel top is at 0x%X\n", (uint32_t)elf_end);
+ 
+     uint32_t target_addr = (uint32_t)elf_end;
++
++    for ( unsigned int i = 0; i < module_count; i++ )
++    {
++        module_t *m = get_module(lctx,i);
++        memRequired += PAGE_UP(m->mod_end - m->mod_start);
++    }
++
++    get_highest_sized_ram(memRequired, 0x100000000ULL, &max_ram_base, &max_ram_size);
++    if(!max_ram_base || !max_ram_size)
++    {
++        printk(TBOOT_INFO"ERROR No suitable memory area found for image relocation!\n");
++	printk(TBOOT_INFO"required 0x%X\n", memRequired);
++        return false;
++    }
+     
+     /* stay above tboot if elf kernel is loaded below tboot */
+     if ( target_addr < get_tboot_mem_end() )
+         target_addr = get_tboot_mem_end();
+ 
++    /* advance to base of largest avail mem */
++    if ( target_addr < max_ram_base )
++        target_addr = max_ram_base;
++
+     /* keep modules page aligned */
+     target_addr = PAGE_UP(target_addr);
+    
+-    uint32_t module_count = get_module_count(lctx);
+-
+     for ( unsigned int i = 0; i < module_count; i++ )
+     {
+         unsigned long base, size;
