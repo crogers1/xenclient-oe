@@ -72,6 +72,7 @@ RDEPENDS_${PN} = " \
     libtctidevice \
     libtctisocket \
     tpm2-tools \
+    gptfdisk \
 "
 
 # open-iscsi-user \
