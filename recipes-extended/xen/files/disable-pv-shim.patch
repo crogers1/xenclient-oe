@@ -1,0 +1,26 @@
+--- a/tools/firmware/xen-dir/shim.config	2018-11-13 16:18:07.668644801 -0500
++++ b/tools/firmware/xen-dir/shim.config	2018-11-13 16:21:23.445475759 -0500
+@@ -19,8 +19,8 @@
+ # CONFIG_TBOOT is not set
+ CONFIG_XEN_GUEST=y
+ CONFIG_PVH_GUEST=y
+-CONFIG_PV_SHIM=y
+-CONFIG_PV_SHIM_EXCLUSIVE=y
++CONFIG_PV_SHIM=n
++CONFIG_PV_SHIM_EXCLUSIVE=n
+ 
+ #
+ # Common Features
+--- a/tools/firmware/Makefile	2018-11-13 16:24:09.662390689 -0500
++++ b/tools/firmware/Makefile	2018-11-13 16:29:51.644659466 -0500
+@@ -1,10 +1,6 @@
+ XEN_ROOT = $(CURDIR)/../..
+ include $(XEN_ROOT)/tools/Rules.mk
+ 
+-ifneq ($(XEN_TARGET_ARCH),x86_32)
+-CONFIG_PV_SHIM := y
+-endif
+-
+ # hvmloader is a 32-bit protected mode binary.
+ TARGET      := hvmloader/hvmloader
+ INST_DIR := $(DESTDIR)$(XENFIRMWAREDIR)

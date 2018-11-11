@@ -1,0 +1,16 @@
+ tools/xenstore/xs.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/tools/xenstore/xs.c b/tools/xenstore/xs.c
+index abffd9cd80..3891e4907c 100644
+--- a/tools/xenstore/xs.c
++++ b/tools/xenstore/xs.c
+@@ -800,7 +800,7 @@ bool xs_watch(struct xs_handle *h, const char *path, const 
+ 	struct iovec iov[2];
+ 
+ #ifdef USE_PTHREAD
+-#define DEFAULT_THREAD_STACKSIZE (16 * 1024)
++#define DEFAULT_THREAD_STACKSIZE (32 * 1024)
+ #define READ_THREAD_STACKSIZE 					\
+ 	((DEFAULT_THREAD_STACKSIZE < PTHREAD_STACK_MIN) ? 	\
+ 	PTHREAD_STACK_MIN : DEFAULT_THREAD_STACKSIZE)

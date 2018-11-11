@@ -45,7 +45,6 @@ IMAGE_INSTALL = " \
     dbus \
     xenclient-dbusbouncer \
     networkmanager \
-    xenclient-toolstack \
     linux-firmware-iwlwifi \
     linux-firmware-bnx2 \
     bridge-utils \
@@ -57,7 +56,6 @@ IMAGE_INSTALL = " \
     v4v-module \
     xen-libxenstore \
     xen-xenstore \
-    xen-ocaml-libs \
     wget \
     ethtool \
     carrier-detect \
@@ -65,6 +63,8 @@ IMAGE_INSTALL = " \
     modemmanager \
     ppp \
     iputils-ping \
+    qtdbd-tools \
+    qtdbd-tools-v4v-wrappers \
 "
 
 require xenclient-image-common.inc

@@ -102,6 +102,7 @@ IMAGE_INSTALL = "\
     uim-gtk2.0 \
     matchbox-keyboard \
     matchbox-keyboard-im \
+    quark \
 "
 
 require xenclient-image-common.inc
