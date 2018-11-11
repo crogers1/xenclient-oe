@@ -33,8 +33,8 @@ IMAGE_INSTALL = "\
     packagegroup-xenclient-common \
     packagegroup-xenclient-dom0 \
     packagegroup-openxt-test \
-    v4v-module \
     xenclient-preload-hs-libs \
+    v4v-module \
     linux-firmware-i915 \
     ${@bb.utils.contains('IMAGE_FEATURES', 'debug-tweaks', 'packagegroup-selinux-policycoreutils audit', '' ,d)} \
 "

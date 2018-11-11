@@ -61,8 +61,8 @@ EXTRA_OEMAKE += "OCAMLDESTDIR=${D}${sitelibdir}"
 
 EXTRA_OECONF += " --enable-blktap2 "
 
-TARGET_CC_ARCH += "${LDFLAGS}"
-CC_FOR_OCAML="i686-oe-linux-gcc"
+#TARGET_CC_ARCH += "${LDFLAGS}"
+CC_FOR_OCAML="x86_64-oe-linux-gcc"
 
 INITSCRIPT_PACKAGES = "xen-xl xen-xenstored-ocaml"
 INITSCRIPT_NAME_xen-xenstored-ocaml = "xenstored"

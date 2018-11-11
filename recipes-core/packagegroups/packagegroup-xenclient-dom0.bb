@@ -21,7 +21,6 @@ RDEPENDS_${PN} = " \
     xen-libxenlight \
     xen-libxenstat \
     xen-libxlutil \
-    xen-ocaml-libs \
     xen-xenstat \
     xen-xenstored \
     xen-xl \
@@ -90,7 +89,8 @@ RDEPENDS_${PN} = " \
     usb-modeswitch \
     upgrade-db \
     rpc-proxy \
-    dbd \
+    qtdbd \
+    qtdbd-tools \
     xenclient-language-sync \
     atapi-pt-helper \
     audio-helper \
@@ -109,7 +109,6 @@ RDEPENDS_${PN} = " \
     vusb-daemon \
     xenmgr-data \
     updatemgr \
-    uid \
     surfman \
     linuxfb-surfman-plugin \
     xenmgr \

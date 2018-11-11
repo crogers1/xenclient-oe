@@ -13,4 +13,4 @@ pkg_postinst_kernel-image () {
 
 pkg_postrm_kernel-image () {
     rm -f $D/${KERNEL_IMAGEDEST}/${KERNEL_IMAGETYPE}
-}
+

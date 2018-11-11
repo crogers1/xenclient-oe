@@ -1,0 +1,210 @@
+#
+# Temporary patch, remove when these commits go upstream
+#
+#
+#
+
+diff --git a/src/db.cpp b/src/db.cpp
+index 42f2f9b..77b9c93 100644
+--- a/src/db.cpp
++++ b/src/db.cpp
+@@ -61,20 +61,14 @@ int Db::getSenderDomId()
+     }
+ 
+     QDBusInterface iface("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", QDBusConnection::systemBus());
+-    if (iface.isValid())
++    QDBusPendingReply<int> reply = iface.asyncCall("GetConnectionDOMID", senderId);
++    reply.waitForFinished();
++    if (reply.isValid())
+     {
+-        QDBusPendingReply<int> reply = iface.asyncCall("GetConnectionDOMID", senderId);
+-        reply.waitForFinished();
+-        if (reply.isValid())
+-        {
+-            return reply.value();
+-        }
+-
+-        qWarning() << "failed to read sender domid for sender id:" << senderId << "error:" << reply.error().name();
+-        return -1;
++        return reply.value();
+     }
+ 
+-    qWarning() << "failed to get valid dbus interface:" << iface.lastError().name();
++    qWarning() << "failed to read sender domid for sender id:" << senderId << ", error:" << reply.error().name() << ", interface:" << iface.lastError().name();
+     return -1;
+ }
+ 
+diff --git a/app/dbd/main.cpp b/app/dbd/main.cpp
+index a00a3a8..3a77b61 100644
+--- a/app/dbd/main.cpp
++++ b/app/dbd/main.cpp
+@@ -33,7 +33,7 @@
+ typedef struct
+ {
+     bool debuggingEnabled;
+-    bool foregroundEnabled;
++    bool backgroundEnabled;
+     bool skipDomidLookupEnabled;
+     bool consoleLoggingEnabled;
+     bool sessionBusEnabled;
+@@ -59,9 +59,9 @@ void parseCommandLine(QCommandLineParser &parser, QCoreApplication &app, CmdLine
+                                    QCoreApplication::translate("main", "enable debug/verbose logging"));
+     parser.addOption(debugOption);
+ 
+-    QCommandLineOption foregroundOption(QStringList() << "f" << "foreground",
+-                                        QCoreApplication::translate("main", "run in foreground - do not fork"));
+-    parser.addOption(foregroundOption);
++    QCommandLineOption backgroundOption(QStringList() << "b" << "background",
++                                        QCoreApplication::translate("main", "run in background - fork"));
++    parser.addOption(backgroundOption);
+ 
+     QCommandLineOption skipLookupDomIDOption(QStringList() << "s" << "skip-domid-lookup",
+             QCoreApplication::translate("main", "skip looking up sender domid using openxt specific call"));
+@@ -88,7 +88,7 @@ void parseCommandLine(QCommandLineParser &parser, QCoreApplication &app, CmdLine
+     parser.process(app);
+ 
+     opts->debuggingEnabled = parser.isSet(debugOption);
+-    opts->foregroundEnabled = parser.isSet(foregroundOption);
++    opts->backgroundEnabled = parser.isSet(backgroundOption);
+     opts->skipDomidLookupEnabled = parser.isSet(skipLookupDomIDOption);
+     opts->consoleLoggingEnabled = parser.isSet(consoleLogOption);
+     opts->sessionBusEnabled = parser.isSet(sessionBusOption);
+@@ -115,7 +115,7 @@ void parseCommandLine(QCommandLineParser &parser, QCoreApplication &app, CmdLine
+     DbdLogging::logger()->debugMode =  opts->debuggingEnabled;
+ 
+     qDebug() << "debugging enabled:" << opts->debuggingEnabled;
+-    qDebug() << "foreground enabled:" << opts->foregroundEnabled;
++    qDebug() << "background enabled:" << opts->backgroundEnabled;
+     qDebug() << "skip domid lookup enabled:" << opts->skipDomidLookupEnabled;
+     qDebug() << "console logging enabled:" << opts->consoleLoggingEnabled;
+     qDebug() << "session bus enabled:" << opts->sessionBusEnabled;
+@@ -141,7 +141,7 @@ int main(int argc, char *argv[])
+ 
+     parseCommandLine(parser, app, &g_cmdLineOptions);
+ 
+-    if (!g_cmdLineOptions.foregroundEnabled)
++    if (g_cmdLineOptions.backgroundEnabled)
+     {
+         daemon(1, 0);
+     }
+
+diff --git a/app/db-cat/main.cpp b/app/db-cat/main.cpp
+index 346923f..cc8bf09 100644
+--- a/app/db-cat/main.cpp
++++ b/app/db-cat/main.cpp
+@@ -70,6 +70,7 @@ void parseCommandLine(QCoreApplication &app, CmdLineOptions *opts)
+ 
+ int main(int argc, char *argv[])
+ {
++    QTextCodec::setCodecForLocale(QTextCodec::codecForName("UTF-8"));
+     qInstallMessageHandler(DbdLogging::logOutput);
+ 
+     QCoreApplication app(argc, argv);
+diff --git a/app/db-dump/main.cpp b/app/db-dump/main.cpp
+index e5b5eb6..cb6da88 100644
+--- a/app/db-dump/main.cpp
++++ b/app/db-dump/main.cpp
+@@ -71,6 +71,7 @@ void parseCommandLine(QCoreApplication &app, CmdLineOptions *opts)
+ 
+ int main(int argc, char *argv[])
+ {
++    QTextCodec::setCodecForLocale(QTextCodec::codecForName("UTF-8"));
+     qInstallMessageHandler(DbdLogging::logOutput);
+ 
+     QCoreApplication app(argc, argv);
+diff --git a/app/db-exists/main.cpp b/app/db-exists/main.cpp
+index 13a13e4..12a8f02 100644
+--- a/app/db-exists/main.cpp
++++ b/app/db-exists/main.cpp
+@@ -71,6 +71,7 @@ void parseCommandLine(QCoreApplication &app, CmdLineOptions *opts)
+ 
+ int main(int argc, char *argv[])
+ {
++    QTextCodec::setCodecForLocale(QTextCodec::codecForName("UTF-8"));
+     qInstallMessageHandler(DbdLogging::logOutput);
+ 
+     QCoreApplication app(argc, argv);
+diff --git a/app/db-inject/main.cpp b/app/db-inject/main.cpp
+index 1cbf23a..5b21099 100644
+--- a/app/db-inject/main.cpp
++++ b/app/db-inject/main.cpp
+@@ -75,6 +75,7 @@ void parseCommandLine(QCoreApplication &app, CmdLineOptions *opts)
+ 
+ int main(int argc, char *argv[])
+ {
++    QTextCodec::setCodecForLocale(QTextCodec::codecForName("UTF-8"));
+     qInstallMessageHandler(DbdLogging::logOutput);
+ 
+     QCoreApplication app(argc, argv);
+diff --git a/app/db-ls/main.cpp b/app/db-ls/main.cpp
+index cd15c68..a4cc678 100644
+--- a/app/db-ls/main.cpp
++++ b/app/db-ls/main.cpp
+@@ -126,6 +126,7 @@ void lsObject(QMPointer<QMJsonValue> value, QStringList &outStringList, QString
+ 
+ int main(int argc, char *argv[])
+ {
++    QTextCodec::setCodecForLocale(QTextCodec::codecForName("UTF-8"));
+     qInstallMessageHandler(DbdLogging::logOutput);
+ 
+     QCoreApplication app(argc, argv);
+diff --git a/app/db-nodes/main.cpp b/app/db-nodes/main.cpp
+index 6a22d8d..17265ec 100644
+--- a/app/db-nodes/main.cpp
++++ b/app/db-nodes/main.cpp
+@@ -72,6 +72,7 @@ void parseCommandLine(QCoreApplication &app, CmdLineOptions *opts)
+ 
+ int main(int argc, char *argv[])
+ {
++    QTextCodec::setCodecForLocale(QTextCodec::codecForName("UTF-8"));
+     qInstallMessageHandler(DbdLogging::logOutput);
+ 
+     QCoreApplication app(argc, argv);
+diff --git a/app/db-read/main.cpp b/app/db-read/main.cpp
+index 7707c8f..4502e94 100644
+--- a/app/db-read/main.cpp
++++ b/app/db-read/main.cpp
+@@ -71,6 +71,7 @@ void parseCommandLine(QCoreApplication &app, CmdLineOptions *opts)
+ 
+ int main(int argc, char *argv[])
+ {
++    QTextCodec::setCodecForLocale(QTextCodec::codecForName("UTF-8"));
+     qInstallMessageHandler(DbdLogging::logOutput);
+ 
+     QCoreApplication app(argc, argv);
+diff --git a/app/db-rm/main.cpp b/app/db-rm/main.cpp
+index fa825d6..12e2f89 100644
+--- a/app/db-rm/main.cpp
++++ b/app/db-rm/main.cpp
+@@ -71,6 +71,7 @@ void parseCommandLine(QCoreApplication &app, CmdLineOptions *opts)
+ 
+ int main(int argc, char *argv[])
+ {
++    QTextCodec::setCodecForLocale(QTextCodec::codecForName("UTF-8"));
+     qInstallMessageHandler(DbdLogging::logOutput);
+ 
+     QCoreApplication app(argc, argv);
+diff --git a/app/db-write/main.cpp b/app/db-write/main.cpp
+index 31d2bcc..001c62f 100644
+--- a/app/db-write/main.cpp
++++ b/app/db-write/main.cpp
+@@ -79,6 +79,7 @@ void parseCommandLine(QCoreApplication &app, CmdLineOptions *opts)
+ 
+ int main(int argc, char *argv[])
+ {
++    QTextCodec::setCodecForLocale(QTextCodec::codecForName("UTF-8"));
+     qInstallMessageHandler(DbdLogging::logOutput);
+ 
+     QCoreApplication app(argc, argv);
+diff --git a/app/dbd/main.cpp b/app/dbd/main.cpp
+index 3a77b61..02c9028 100644
+--- a/app/dbd/main.cpp
++++ b/app/dbd/main.cpp
+@@ -125,6 +125,7 @@ void parseCommandLine(QCommandLineParser &parser, QCoreApplication &app, CmdLine
+ 
+ int main(int argc, char *argv[])
+ {
++    QTextCodec::setCodecForLocale(QTextCodec::codecForName("UTF-8"));
+     qInstallMessageHandler(DbdLogging::logOutput);
+ 
+     QCoreApplication app(argc, argv);

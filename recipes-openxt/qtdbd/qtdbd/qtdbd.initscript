@@ -1,0 +1,71 @@
+#!/bin/sh
+#
+# Copyright (c) 2015 Assured Information Security, Inc.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+#
+
+# Provides: dbd
+
+set -e
+
+test -x /usr/bin/dbd || exit 0
+
+export PATH="/usr/sbin:/sbin:${PATH}"
+
+DBD_ARGS=""
+
+upgradedb() {
+    if [ ! -f /config/db ]; then
+        if [ ! -f /config/db.tmp ]; then
+            echo "Installing default dbd database in /config/db"
+            cp --preserve=xattr /usr/share/xenclient/db.default /config/db
+        fi
+    fi
+
+    echo -n "Upgrading database format: "
+
+    /usr/bin/upgrade-db | logger -s -t upgrade-db -p user.notice
+
+    if [ ${PIPESTATUS[0]} -ne 0 ]; then
+        echo "FAILED to upgrade database. NOT starting dbd."
+        exit 1
+    fi 
+
+    echo "db version OK"
+}
+
+case "$1" in
+    start)
+        echo "Starting dbd"
+        upgradedb && start-stop-daemon --start --quiet --background --oknodo --exec /usr/bin/dbd -- ${DBD_ARGS}
+        ;;
+    stop)
+        echo "Stopping dbd"
+        killall dbd
+        sleep 1
+        ;;
+    restart)
+        echo "Restarting dbd"
+        killall dbd
+        sleep 1
+        start-stop-daemon --start --quiet --background --oknodo --exec /usr/bin/dbd -- ${DBD_ARGS}
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart}"
+        exit 1
+esac
+
+exit 0

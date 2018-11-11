@@ -51,6 +51,7 @@ SRC_URI_append = " \
     file://tboot-xen-evtlog-support.patch \
     file://disable-cpuid-hle-rtm.patch \
     file://allow-stubdoms-cacheattr-control.patch \
+    file://add-xc-hypercall-page.patch \
     file://libxl-do-not-destroy-in-use-tapdevs.patch \
     file://libxl-syslog.patch \
     file://libxl-RFC-4of7-Add-stubdomain-version-tools-domain-build-info.patch \
@@ -88,6 +89,7 @@ SRC_URI_append = " \
     file://xl-shutdown-wait-for-domain-death.patch \
     file://libxl-allow-save-vnuma.patch \
     file://domain-reboot.patch \
+    file://disable-pv-shim.patch \
     ${BLKTAP_PATCHQUEUE} \
     file://efi-hardcode-openxt-cfg.patch \
     file://0001-EFI-add-EFI_LOAD_OPTION-support.patch \
@@ -122,4 +124,11 @@ DEPENDS_remove = "iproute2"
 
 deltask stubs
 deltask deploy
+
+do_configure_append() {
+    if [ ! -e ${STAGING_INCDIR}/bits/long-double-32.h ]; then
+        cp ${STAGING_INCDIR}/bits/long-double-64.h ${STAGING_INCDIR}/bits/long-double-32.h
+        cp ${STAGING_INCDIR}/gnu/stubs-64.h ${STAGING_INCDIR}/gnu/stubs-32.h
+    fi
+}
 #--

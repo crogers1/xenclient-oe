@@ -3,7 +3,7 @@ LICENSE = "LGPLv2.1"
 LIC_FILES_CHKSUM = "file://COPYING;md5=321bf41f280cf805086dd5a720b37785"
 DEPENDS += "ocaml-dbus camomile xen xz"
 RDEPENDS_${PN} = "xen-xenstore xen-xenstored"
-RDEPENDS_${PN}_xenclient-ndvm += " db-tools"
+RDEPENDS_${PN}_xenclient-ndvm += " qtdbd-tools qtdbd-tools-v4v-wrappers "
 
 DEPENDS_append_xenclient-nilfvm += " ${@deb_bootstrap_deps(d)} "
 
@@ -61,7 +61,7 @@ PACKAGE_ARCH = "${MACHINE_ARCH}"
 S = "${WORKDIR}/git"
 
 # TODO: ocamlc can figure it out in the build-system.
-CFLAGS_append = " -I${ocamlincdir}"
+CFLAGS_append = " -fPIC -I${ocamlincdir}"
 do_compile() {
         make V=1 XEN_DIST_ROOT="${STAGING_DIR_HOST}"
 }
