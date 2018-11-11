@@ -21,7 +21,6 @@ RDEPENDS_${PN} = " \
     xen-libxenlight \
     xen-libxenstat \
     xen-libxlutil \
-    xen-ocaml-libs \
     xen-xenstat \
     xen-xenstored \
     xen-xl \
@@ -45,7 +44,6 @@ RDEPENDS_${PN} = " \
     ovmf \
     xcpmd \
     vbetool \
-    xenclient-toolstack \
     xenclient-input-daemon \
     xenclient-dom0-tweaks \
     xenclient-splash-images \
@@ -90,7 +88,8 @@ RDEPENDS_${PN} = " \
     usb-modeswitch \
     upgrade-db \
     rpc-proxy \
-    dbd \
+    qtdbd \
+    qtdbd-tools \
     xenclient-language-sync \
     atapi-pt-helper \
     audio-helper \
@@ -109,7 +108,6 @@ RDEPENDS_${PN} = " \
     vusb-daemon \
     xenmgr-data \
     updatemgr \
-    uid \
     surfman \
     linuxfb-surfman-plugin \
     xenmgr \
@@ -120,6 +118,7 @@ RDEPENDS_${PN} = " \
     tpm2-tools \
     ${@bb.utils.contains('DISTRO_FEATURES', 'blktap2', 'xen-blktap xen-libblktapctl xen-libvhd', 'blktap3', d)} \
     pesign \
+    gdb \
 "
 
 # OE upgrade - temporarly disabled:

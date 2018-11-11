@@ -12,7 +12,7 @@ SRC_URI = "git://${OPENXT_GIT_MIRROR}/input.git;protocol=${OPENXT_GIT_PROTOCOL};
 	   file://input-daemon.initscript \
 "
 
-CFLAGS_append += " -Wno-unused-parameter -Wno-deprecated-declarations "
+CFLAGS_append += " -Wno-unused-parameter -Wno-deprecated-declarations"
 
 S = "${WORKDIR}/git"
 

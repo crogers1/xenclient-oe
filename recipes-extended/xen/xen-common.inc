@@ -1,5 +1,4 @@
-LIC_FILES_CHKSUM := "file://COPYING;md5=bbb4b1bdc2c3b6743da3c39d03249095"
-
+LIC_FILES_CHKSUM := "file://COPYING;md5=bbb4b1bdc2c3b6743da3c39d03249095" 
 require xen-version.inc
 
 PV = "${XEN_PV}"
@@ -51,6 +50,7 @@ SRC_URI_append = " \
     file://tboot-xen-evtlog-support.patch \
     file://disable-cpuid-hle-rtm.patch \
     file://allow-stubdoms-cacheattr-control.patch \
+    file://add-xc-hypercall-page.patch \
     file://libxl-do-not-destroy-in-use-tapdevs.patch \
     file://libxl-syslog.patch \
     file://libxl-RFC-4of7-Add-stubdomain-version-tools-domain-build-info.patch \
@@ -88,6 +88,7 @@ SRC_URI_append = " \
     file://xl-shutdown-wait-for-domain-death.patch \
     file://libxl-allow-save-vnuma.patch \
     file://domain-reboot.patch \
+    file://disable-pv-shim.patch \
     ${BLKTAP_PATCHQUEUE} \
     file://efi-hardcode-openxt-cfg.patch \
     file://0001-EFI-add-EFI_LOAD_OPTION-support.patch \
@@ -95,6 +96,7 @@ SRC_URI_append = " \
     file://efi-require-shim.patch \
     file://tboot-measure-and-launch-from-xen-efi.patch \
     file://efi-load-options-no-default-image-name.patch \
+    file://stacksize.patch \
 "
 
 COMPATIBLE_HOST = 'i686-oe-linux|(x86_64.*).*-linux|aarch64.*-linux'
@@ -103,6 +105,8 @@ PACKAGECONFIG =+ "xsm"
 PACKAGECONFIG =+ "hvm"
 
 S = "${WORKDIR}/git"
+
+TUNE_CCARGS := "${@oe.utils.str_filter_out('-msse3', '${TUNE_CCARGS}', d)}"
 
 #--
 # Override meta-virtualization's path to seabios and add ovmf:
@@ -122,4 +126,11 @@ DEPENDS_remove = "iproute2"
 
 deltask stubs
 deltask deploy
+
+do_configure_append() {
+    if [ ! -e ${STAGING_INCDIR}/bits/long-double-32.h ]; then
+        cp ${STAGING_INCDIR}/bits/long-double-64.h ${STAGING_INCDIR}/bits/long-double-32.h
+        cp ${STAGING_INCDIR}/gnu/stubs-64.h ${STAGING_INCDIR}/gnu/stubs-32.h
+    fi
+}
 #--
