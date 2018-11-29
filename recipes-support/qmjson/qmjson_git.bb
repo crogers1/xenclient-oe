@@ -14,5 +14,7 @@ inherit qmake5
 DEPENDS = "qtbase"
 
 EXTRA_OEMAKE += "INSTALL_ROOT=${D}"
+CFLAGS += "-Wimplicit-fallthrough=0"
+CXXFLAGS += "-Wimplicit-fallthrough=0"
 
 PR="r2"

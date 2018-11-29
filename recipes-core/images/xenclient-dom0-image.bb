@@ -33,6 +33,7 @@ IMAGE_INSTALL = "\
     packagegroup-xenclient-common \
     packagegroup-xenclient-dom0 \
     packagegroup-openxt-test \
+    packagegroup-core-buildessential \
     xenclient-preload-hs-libs \
     v4v-module \
     linux-firmware-i915 \
