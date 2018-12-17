@@ -1,13 +1,13 @@
 DESCRIPTION = "XenClient toolstack"
 LICENSE = "LGPLv2.1"
 LIC_FILES_CHKSUM = "file://COPYING;md5=321bf41f280cf805086dd5a720b37785"
-DEPENDS += "ocaml-dbus camomile xen xz"
+DEPENDS += "xen xz"
 RDEPENDS_${PN} = "xen-xenstore xen-xenstored"
 RDEPENDS_${PN}_xenclient-ndvm += " qtdbd-tools qtdbd-tools-v4v-wrappers "
 
 DEPENDS_append_xenclient-nilfvm += " ${@deb_bootstrap_deps(d)} "
 
-inherit autotools-brokensep ocaml findlib
+inherit autotools-brokensep
 inherit ${@"xenclient-simple-deb"if(d.getVar("MACHINE",1)=="xenclient-nilfvm")else("null")}
 
 PACKAGES = "${PN}-dbg ${PN}-doc ${PN}-locale ${PN}-dev ${PN}-staticdev ${PN} \
@@ -61,20 +61,9 @@ PACKAGE_ARCH = "${MACHINE_ARCH}"
 S = "${WORKDIR}/git"
 
 # TODO: ocamlc can figure it out in the build-system.
-CFLAGS_append = " -fPIC -I${ocamlincdir}"
 do_compile() {
         make V=1 XEN_DIST_ROOT="${STAGING_DIR_HOST}"
 }
-
-OCAML_INSTALL_LIBS = " \
-    libs/uuid \
-    libs/stdext \
-    libs/json \
-    libs/jsonrpc \
-    libs/http \
-    libs/log \
-    libs/common \
-    "
 
 do_configure_xenclient-nilfvm() {
         :
@@ -91,10 +80,6 @@ do_install() {
         install -d ${D}/etc/xen/scripts
         install -m 0755 ${WORKDIR}/vif ${D}/etc/xen/scripts/vif
 
-        for ocaml_lib in ${OCAML_INSTALL_LIBS}; do
-            # Use of DESTDIR is not consistent here.
-            # root Makefile sur $(DESTDIR)/usr/bin while libs use $(DESTDIR)/$(ocamlfind printconf destdir)
-                oe_runmake -C $ocaml_lib V=1 install
         done
 }
 

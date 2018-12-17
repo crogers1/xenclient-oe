@@ -44,7 +44,6 @@ RDEPENDS_${PN} = " \
     ovmf \
     xcpmd \
     vbetool \
-    xenclient-toolstack \
     xenclient-input-daemon \
     xenclient-dom0-tweaks \
     xenclient-splash-images \

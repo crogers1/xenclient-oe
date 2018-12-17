@@ -11,6 +11,7 @@ FILES_${PN} += "\
     /usr/share/firmware/ovmf.bin \
     "
 
+
 # This is mostly a copy-paste from the upstream recipe but we need to force
 # OVMF_ARCH to be X64 and there is no easier way to do that. We omit a bunch
 # of symlinks and SecureBoot related logic that are just not applicable.
