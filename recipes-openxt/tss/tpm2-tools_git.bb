@@ -24,8 +24,6 @@ PV = "${PVBASE}.${SRCPV}"
 
 EXTRA_OECONF = "--with-tcti-device --without-tcti-socket"
 
-CFLAGS += "-Wimplicit-fallthrough=0"
-
 inherit autotools pkgconfig
 
 do_configure_prepend () {
