@@ -39,7 +39,7 @@ IMAGE_LINGUAS = " \
 "
 
 
-# Refine xserver packages installed by packagegroup-core-x11-xserver.
+# Replace packagegroup-core-x11-xserver with the packages below.
 XSERVER = " \
     xserver-xorg \
     xf86-input-evdev \
@@ -50,7 +50,7 @@ XSERVER = " \
 
 IMAGE_INSTALL = "\
     ${ROOTFS_PKGMANAGE} \
-    packagegroup-core-x11-xserver \
+    ${XSERVER} \
     modules \
     packagegroup-xenclient-common \
     packagegroup-xenclient-xfce-minimal \
