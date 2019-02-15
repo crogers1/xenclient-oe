@@ -4,8 +4,8 @@ LIC_FILES_CHKSUM = "file://LICENSE;md5=2c1c00f9d3ed9e24fa69b932b7e7aff2"
 
 FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}:"
 
-SRC_URI = "git://${OPENXT_GIT_MIRROR}/qtdbd.git;protocol=${OPENXT_GIT_PROTOCOL};branch=${OPENXT_BRANCH} \
-           file://qtdbd.patch;patch=1 \
+SRC_URI = "git://github.com/cjp256/qtdbd.git;protocol=git;branch=master \
+           file://qtdbd.patch \
            file://qtdbd.initscript \
            file://db.default \
            file://db-cat-dom0 \
