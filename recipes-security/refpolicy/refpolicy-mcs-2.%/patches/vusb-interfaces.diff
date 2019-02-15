@@ -12,4 +12,3 @@ Index: refpolicy/policy/modules/contrib/xen.te
 +
  dbd_dbus_chat(xend_t)
  surfman_dbus_chat(xend_t)
- uid_dbus_chat(xend_t)

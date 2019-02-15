@@ -24,6 +24,11 @@ policy_module(db-cmd, 0.1)
 #
 # Declarations
 #
+require {
+    type random_device_t;
+    type urandom_device_t;
+}
+
 type db_cmd_t;
 type db_cmd_exec_t;
 init_system_domain(db_cmd_t, db_cmd_exec_t)
@@ -57,6 +62,8 @@ dbus_system_bus_client(db_cmd_t)
 dbd_dbus_chat(db_cmd_t)
 
 allow db_cmd_t self:netlink_route_socket rw_netlink_socket_perms;
+allow db_cmd_t random_device_t:chr_file { open read };
+allow db_cmd_t urandom_device_t:chr_file { open read };
 
 optional_policy(`
 	network_slave_use_fds(db_cmd_t)
