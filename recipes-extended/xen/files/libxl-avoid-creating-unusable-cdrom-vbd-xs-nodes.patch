@@ -30,55 +30,44 @@ Mahantesh Salimath<salimathm@ainfosec.com>
  
      if (ret) {
          LOGD(ERROR, domid, "cannot (re-)build domain: %d", ret);
-@@ -1322,11 +1322,51 @@ static void domcreate_rebuild_done(libxl
+@@ -1322,6 +1322,40 @@ static void domcreate_rebuild_done(libxl
  
      store_libxl_entry(gc, domid, &d_config->b_info);
  
-+    /* Below quirk is to prevent the creation of useless vbd nodes
-+     * in xenstore.
-+     */
-+    if(d_config->c_info.type == LIBXL_DOMAIN_TYPE_HVM) {
-+        libxl_domain_config domain_config;
-+        int i = 0;
-+        int j = 0;
-+        bool has_stub;
++    /* Remove disks that will not require xenstore vbd nodes from the domain
++     * configuration. */
++    if (d_config->c_info.type == LIBXL_DOMAIN_TYPE_HVM) {
++        unsigned int i = 0;
++        bool stubdomain =
++            libxl_defbool_val(d_config->b_info.device_model_stubdomain);
 +
-+        has_stub = libxl_defbool_val(d_config->b_info.device_model_stubdomain);
-+        libxl_domain_config_copy(CTX, &domain_config, dcs->guest_config);
-+        d_config = &domain_config;
-+
-+        for( ; i < d_config->num_disks; i++) {
-+            if(d_config->disks[i].is_cdrom) {
-+
-+                /* No atapi-pt vbd nodes */
-+                if(!strncmp(d_config->disks[i].vdev, "atapi-pt", 9))
-+                    continue;
-+
-+                /* No emulated cdroms for guests that have stubdom */
-+                if(has_stub)
-+                    continue;
-+
-+            }
-+            if(j != i)
++        while (i < d_config->num_disks) {
++            /* - The stubdomain already has the required configuration to get
++             *   the blkfront disk for QEMU to access the cdrom image
++             * - ATAPI-PT uses the atapi-helper to access the hardware
++             *   ATAPI device, no need for the vbd nodes either.
++             */
++            if (d_config->disks[i].is_cdrom &&
++                (stubdomain ||
++                !strcmp(d_config->disks[i].vdev, "atapi-pt"))) {
++                /* if last disk just remove it,
++                 * otherwise replace with the last one in the array and restart
++                 * from there. */
++                libxl_device_disk_dispose(&d_config->disks[i]);
++                if (i != d_config->num_disks - 1)
 +                    libxl_device_disk_copy(CTX,
-+                                           &d_config->disks[j],
-+                                           &d_config->disks[i]);
-+            j++;
++                        &d_config->disks[i],
++                        &d_config->disks[d_config->num_disks - 1]);
++                --d_config->num_disks;
++            } else
++                ++i;
 +        }
-+        d_config->num_disks = j;
-+        d_config->disks = libxl__realloc(NOGC,
-+                                         d_config->disks,
-+                                         sizeof(*(d_config->disks)) * j);
++
++        d_config->disks =
++            libxl__realloc(NOGC, d_config->disks,
++                           d_config->num_disks * sizeof (d_config->disks[0]));
 +    }
 +
      libxl__multidev_begin(ao, &dcs->multidev);
      dcs->multidev.callback = domcreate_launch_dm;
      libxl__add_disks(egc, ao, domid, d_config, &dcs->multidev);
-     libxl__multidev_prepared(egc, &dcs->multidev, 0);
- 
-+    if(d_config != dcs->guest_config)
-+        libxl_domain_config_dispose(d_config);
-+
-     return;
- 
-  error_out:
