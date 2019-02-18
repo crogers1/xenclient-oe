@@ -60,15 +60,6 @@ PATCHES
  char *libxl__blktap_devpath(libxl__gc *gc,
                              const char *disk,
                              libxl_disk_format format)
-@@ -51,7 +63,7 @@ char *libxl__blktap_devpath(libxl__gc *g
-     return NULL;
- }
- 
--static bool tapdev_is_shared(libxl__gc *gc, const char *params)
-+bool tapdev_is_shared(libxl__gc *gc, const char *params)
- {
-     char **domids, **vbds;
-     char *tp;
 --- a/tools/libxl/libxl_device.c
 +++ b/tools/libxl/libxl_device.c
 @@ -18,7 +18,7 @@
@@ -158,9 +149,7 @@ PATCHES
 +        libxl__xs_rm_checked(gc, t, fe_path);
 +    } while (xs_transaction_end(ctx->xsh, t, false) == false && errno == EAGAIN);
 +
-+    /* cleanup old tap if it's not shared with anyone else */
-+    if(!tapdev_is_shared(gc, tmp))
-+        libxl__device_destroy_tapdisk(gc, tmp, stubdomid);
++    libxl__device_destroy_tapdisk(gc, tmp, stubdomid);
 +
 +    /*write new device */
 +    do {
@@ -387,17 +376,16 @@ PATCHES
  _hidden char *libxl__device_libxl_path(libxl__gc *gc, libxl__device *device);
  _hidden int libxl__parse_backend_path(libxl__gc *gc, const char *path,
                                        libxl__device *dev);
-@@ -1771,6 +1772,9 @@ _hidden char *libxl__blktap_devpath(libx
+@@ -1771,6 +1772,8 @@ _hidden char *libxl__blktap_devpath(libx
                                      const char *disk,
                                      libxl_disk_format format);
  
 +_hidden int libxl__get_tap_minor(libxl__gc *gc, libxl_disk_format format, const char *disk);
-+_hidden bool tapdev_is_shared(libxl__gc *gc, const char *params);
 +
  /* libxl__device_destroy_tapdisk:
   *   Destroys any tapdisk process associated with the backend represented
   *   by be_path.
-@@ -1838,6 +1842,7 @@ _hidden int libxl__qmp_restore(libxl__gc
+@@ -1838,6 +1841,7 @@ _hidden int libxl__qmp_restore(libxl__gc
  /* Set dirty bitmap logging status */
  _hidden int libxl__qmp_set_global_dirty_log(libxl__gc *gc, int domid, bool enable);
  _hidden int libxl__qmp_insert_cdrom(libxl__gc *gc, int domid, const libxl_device_disk *disk);
