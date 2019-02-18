@@ -1,0 +1,62 @@
+################################################################################
+SHORT DESCRIPTION:
+################################################################################
+Remove deprecated and unreachable sequence from libxl_string_to_backend.
+
+################################################################################
+LONG DESCRIPTION:
+################################################################################
+if (!strcmp(s, "tap")) guaranties strtok(s, ':') will return NULL, so remove
+the entire block. This looks like legacy churn as the processed strings are
+handled by different helpers.
+
+Backend type "file" does not exist anymore it seems and backend using files
+will use "phy" instead. "tap" seems to be replaced entirely by "phy", and
+LIBXL_DISK_BACKEND_TAP depends only on xenstore values.
+
+libxl_string_to_backend has only one callsite (tools/libxl/libxl_disk.c:549).
+
+################################################################################
+--- a/tools/libxl/libxl_utils.c
++++ b/tools/libxl/libxl_utils.c
+@@ -354,34 +354,14 @@ out:
+ 
+ int libxl_string_to_backend(libxl_ctx *ctx, char *s, libxl_disk_backend *backend)
+ {
+-    char *p;
+-    int rc = 0;
+-
+-    if (!strcmp(s, "phy")) {
++    if (!strcmp(s, "phy"))
+         *backend = LIBXL_DISK_BACKEND_PHY;
+-    } else if (!strcmp(s, "file")) {
+-        *backend = LIBXL_DISK_BACKEND_TAP;
+-    } else if (!strcmp(s, "qdisk")) {
++    else if (!strcmp(s, "qdisk"))
+         *backend = LIBXL_DISK_BACKEND_QDISK;
+-    } else if (!strcmp(s, "tap")) {
+-        p = strchr(s, ':');
+-        if (!p) {
+-            rc = ERROR_INVAL;
+-            goto out;
+-        }
+-        p++;
+-        if (!strcmp(p, "vhd")) {
+-            *backend = LIBXL_DISK_BACKEND_TAP;
+-        } else if (!strcmp(p, "qcow")) {
+-            *backend = LIBXL_DISK_BACKEND_QDISK;
+-        } else if (!strcmp(p, "qcow2")) {
+-            *backend = LIBXL_DISK_BACKEND_QDISK;
+-        } else if (!strcmp(p, "qed")) {
+-            *backend = LIBXL_DISK_BACKEND_QDISK;
+-        }
+-    }
+-out:
+-    return rc;
++    else
++        return ERROR_INVAL;
++
++    return 0;
+ }
+ 
+ int libxl_read_file_contents(libxl_ctx *ctx, const char *filename,
