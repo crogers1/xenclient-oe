@@ -12,18 +12,23 @@ S = "${WORKDIR}/git/"
 
 SRC_URI = "git://git.suckless.org/quark;protocol=ssh;branch=master \
            file://add-POST-and-v4v-support.patch \
-           file://init \
+           file://quark.initscript \
         "
 
-FILES_${PN} = "/usr/bin/quark \
-               /etc/init.d/quark \
-              "
+inherit update-rc.d
+
+INITSCRIPT_NAME = "quark"
+INITSCRIPT_PARAMS = "defaults 81"
+
+FILES_${PN} = " \
+    /usr/bin/quark \
+    ${sysconfdir}/init.d/quark \
+"
 
 do_install() {
     oe_runmake DESTDIR=${D} install
 
     # initscript
-    install -d ${D}${sysconfdir}/init.d
-    install -m 0755 -o root -g root ${WORKDIR}/init ${D}${sysconfdir}/init.d/quark
+    install -m 0755 -d ${D}${sysconfdir}/init.d
+    install -m 0755 ${WORKDIR}/quark.initscript ${D}${sysconfdir}/init.d/quark
 }
-

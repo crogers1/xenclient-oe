@@ -119,6 +119,7 @@ RDEPENDS_${PN} = " \
     ${@bb.utils.contains('DISTRO_FEATURES', 'blktap2', 'xen-blktap xen-libblktapctl xen-libvhd', 'blktap3', d)} \
     pesign \
     gdb \
+    quark \
 "
 
 # OE upgrade - temporarly disabled:
