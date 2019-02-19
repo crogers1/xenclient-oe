@@ -9,8 +9,6 @@ SRC_URI = "file://v4v.modutils \
 
 PACKAGES = "${PN}"
 
-RDEPENDS_${PN} += "db-tools"
-
 FILES_${PN} = "/"
 
 inherit update-rc.d
