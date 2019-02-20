@@ -1,4 +1,4 @@
-From 437462a40e97c2e0a2aca9e5f64058681ca4385b Mon Sep 17 00:00:00 2001
+From b641adf1c1633ca5e7f4429f3c7ee4111d1e2400 Mon Sep 17 00:00:00 2001
 From: Eric Chanudet <chanudete@ainfosec.com>
 Date: Fri, 15 Feb 2019 21:36:46 -0500
 Subject: [PATCH 2/2] xen/v4v: Add the v4v chardev ioctls.
@@ -8,22 +8,18 @@ Check arguments of ioctls used by the V4V chardev as released in OpenXT
 
 Signed-off-by: Eric Chanudet <chanudete@ainfosec.com>
 ---
- coregrind/m_syswrap/syswrap-linux.c | 144 +++++++++++++++++++++++++++-
- include/vki/vki-linux.h             |  53 ++++++++++
- 2 files changed, 196 insertions(+), 1 deletion(-)
+ coregrind/m_syswrap/syswrap-linux.c | 142 ++++++++++++++++++++++++++++
+ include/vki/vki-linux.h             |  53 +++++++++++
+ 2 files changed, 195 insertions(+)
 
 diff --git a/coregrind/m_syswrap/syswrap-linux.c b/coregrind/m_syswrap/syswrap-linux.c
-index f2ebc161f..b51055162 100644
+index f2ebc161f..7d1163d43 100644
 --- a/coregrind/m_syswrap/syswrap-linux.c
 +++ b/coregrind/m_syswrap/syswrap-linux.c
-@@ -8516,7 +8516,99 @@ PRE(sys_ioctl)
+@@ -8519,6 +8519,98 @@ PRE(sys_ioctl)
+       PRE_MEM_WRITE("ioctl(VKI_PERF_EVENT_IOC_ID)", (Addr)ARG3, sizeof(__vki_u64));
        break;
  
-    case VKI_PERF_EVENT_IOC_ID:
--      PRE_MEM_WRITE("ioctl(VKI_PERF_EVENT_IOC_ID)", (Addr)ARG3, sizeof(__vki_u64));
-+      PRE_MEM_READ("ioctl(VKI_PERF_EVENT_IOC_ID)", (Addr)ARG3, sizeof(__vki_u64));
-+      break;
-+
 +   case VKI_V4VIOCSETRINGSIZE:
 +      PRE_MEM_READ("ioctl(VKI_V4VIOCSETRINGSIZE)", (Addr)ARG3, sizeof (__vki_u32));
 +      break;
@@ -66,11 +62,11 @@ index f2ebc161f..b51055162 100644
 +      PRE_MEM_READ("ioctl(VKI_V4VIOCSEND).len",
 +                   (Addr)&dev->len, sizeof (dev->len));
 +      PRE_MEM_READ("ioctl(VKI_V4VIOCSEND).flags",
-+		   (Addr)&dev->flags, sizeof (dev->flags));
++                   (Addr)&dev->flags, sizeof (dev->flags));
 +      PRE_MEM_READ("ioctl(VKI_V4VIOCSEND).addr",
-+		   (Addr)&dev->addr, sizeof (*dev->addr));
++                   (Addr)&dev->addr, sizeof (*dev->addr));
 +      PRE_MEM_READ("ioctl(VKI_V4VIOCSEND).buf",
-+		   (Addr)&dev->addr, sizeof (vki_uint8_t) * dev->len);
++                   (Addr)&dev->addr, sizeof (vki_uint8_t) * dev->len);
 +      break;
 +   }
 +   case VKI_V4VIOCRECV: {
@@ -78,45 +74,47 @@ index f2ebc161f..b51055162 100644
 +      PRE_MEM_READ("ioctl(VKI_V4VIOCSEND).len",
 +                   (Addr)&dev->len, sizeof (dev->len));
 +      PRE_MEM_READ("ioctl(VKI_V4VIOCSEND).flags",
-+		   (Addr)&dev->flags, sizeof (dev->flags));
++                   (Addr)&dev->flags, sizeof (dev->flags));
 +      PRE_MEM_READ("ioctl(VKI_V4VIOCSEND).addr",
-+		   (Addr)&dev->addr, sizeof (*dev->addr));
++                   (Addr)&dev->addr, sizeof (*dev->addr));
 +      PRE_MEM_WRITE("ioctl(VKI_V4VIOCSEND).buf",
-+		   (Addr)&dev->addr, sizeof (vki_uint8_t) * dev->len);
++                    (Addr)&dev->addr, sizeof (vki_uint8_t) * dev->len);
 +      break;
 +   }
 +   case VKI_V4VIOCVIPTABLESADD: {
 +      struct vki_v4v_viptables_rule_pos *r =
 +         (struct vki_v4v_viptables_rule_pos *)ARG3;
 +      PRE_MEM_READ("ioctl(VKI_V4VIOCVIPTABLESADD).rule",
-+		   (Addr)&r->rule, sizeof (*r->rule));
++                   (Addr)&r->rule, sizeof (*r->rule));
 +      PRE_MEM_READ("ioctl(VKI_V4VIOCVIPTABLESADD).position",
-+		   (Addr)&r->position, sizeof (r->position));
++                   (Addr)&r->position, sizeof (r->position));
 +      break;
 +   }
 +   case VKI_V4VIOCVIPTABLESDEL: {
 +      struct vki_v4v_viptables_rule_pos *r =
 +         (struct vki_v4v_viptables_rule_pos *)ARG3;
 +      PRE_MEM_READ("ioctl(VKI_V4VIOCVIPTABLESDEL).rule",
-+		   (Addr)&r->rule, sizeof (*r->rule));
++                   (Addr)&r->rule, sizeof (*r->rule));
 +      PRE_MEM_READ("ioctl(VKI_V4VIOCVIPTABLESDEL).position",
-+		   (Addr)&r->position, sizeof (r->position));
++                   (Addr)&r->position, sizeof (r->position));
 +      break;
 +   }
 +   case VKI_V4VIOCVIPTABLESLIST: {
 +      struct vki_v4v_viptables_list *l = (struct vki_v4v_viptables_list *)ARG3;
 +      PRE_MEM_READ("ioctl(VKI_V4VIOCVIPTABLESLIST).nb_rules",
-+		   (Addr)&l->nb_rules, sizeof (l->nb_rules));
++                   (Addr)&l->nb_rules, sizeof (l->nb_rules));
 +      PRE_MEM_WRITE("ioctl(VKI_V4VIOCVIPTABLESLIST).rules",
-+		    (Addr)l->rules, VKI_V4V_VIPTABLES_LIST_SIZE *
-+		    sizeof (l->rules[0]));
++                    (Addr)l->rules, VKI_V4V_VIPTABLES_LIST_SIZE *
++                    sizeof (l->rules[0]));
 +      break;
 +   }
 +   case VKI_V4VIOCGETSOCKTYPE:
 +      PRE_MEM_WRITE("ioctl(VKI_V4VIOCGETSOCKTYPE)", (Addr)ARG3, sizeof (int));
-       break;
- 
++      break;
++
     default:
+       /* EVIOC* are variable length and return size written on success */
+       switch (ARG2 & ~(_VKI_IOC_SIZEMASK << _VKI_IOC_SIZESHIFT)) {
 @@ -8549,6 +8641,8 @@ PRE(sys_ioctl)
        }
        break;
