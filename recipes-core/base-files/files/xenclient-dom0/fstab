@@ -25,7 +25,6 @@ devpts                         /dev/pts                devpts      mode=0620,gid
 tmpfs                          /dev/shm                tmpfs       mode=0777,size=1M                                                               0 0
 
 xenfs                          /proc/xen               xenfs       defaults                                                                        0 0
-efivarfs                       /sys/firmware/efi/efivars efivarfs  ro,nosuid,nodev,noexec,noatime                                                  0 0
 
 tmpfs                          /var/lib/ovf            tmpfs       defaults,rootcontext=system_u:object_r:xc_ovf_var_lib_t:s0,size=100M            0 0
 tmpfs                          /var/lib/dbus           tmpfs       defaults,rootcontext=system_u:object_r:system_dbusd_var_lib_t:s0,size=1M        0 0
@@ -40,3 +39,8 @@ ramfs                          /mnt/secure             ramfs       context=syste
 /dev/mapper/xenclient-boot     /boot/system            ext4        errors=remount-ro,noatime                                                       1 4
 /dev/mapper/xenclient-storage  /storage                ext4        errors=remount-ro,user_xattr,noatime                                            1 5
 /dev/mapper/swap               none                    swap        sw                                                                              0 0
+
+# OpenXT: The following mount will fail on non-UEFI installs.
+# For some reason, at boot time, that usually results in the rest of this file getting ignored.
+# Having it be the last one makes it a non-issue.
+efivarfs                       /sys/firmware/efi/efivars efivarfs  ro,nosuid,nodev,noexec,noatime                                                  0 0
