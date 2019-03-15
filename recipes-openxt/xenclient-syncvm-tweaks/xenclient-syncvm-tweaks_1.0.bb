@@ -9,7 +9,7 @@ SRC_URI = "file://v4v.modutils \
 
 PACKAGES = "${PN}"
 
-RDEPENDS_${PN} += "db-tools"
+RDEPENDS_${PN} += "qtdbd-tools-v4v-wrappers"
 
 FILES_${PN} = "/"
 

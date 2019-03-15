@@ -91,7 +91,8 @@ RDEPENDS_${PN} = " \
     usb-modeswitch \
     upgrade-db \
     rpc-proxy \
-    dbd \
+    qtdbd \
+    qtdbd-tools \
     xenclient-language-sync \
     atapi-pt-helper \
     audio-helper \
