@@ -65,6 +65,8 @@ IMAGE_INSTALL = " \
     modemmanager \
     ppp \
     iputils-ping \
+    qtdbd-tools \
+    qtdbd-tools-v4v-wrappers \
 "
 
 require xenclient-image-common.inc

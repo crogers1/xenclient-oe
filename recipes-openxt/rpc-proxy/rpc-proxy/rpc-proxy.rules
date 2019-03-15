@@ -5,6 +5,7 @@ deny all
 allow destination com.citrix.xenclient.db interface com.citrix.xenclient.db member read if-boolean domstore-read-access true
 allow destination com.citrix.xenclient.db interface com.citrix.xenclient.db member read_binary if-boolean domstore-read-access true
 allow destination com.citrix.xenclient.db interface com.citrix.xenclient.db member list if-boolean domstore-read-access true
+allow destination com.citrix.xenclient.db interface com.citrix.xenclient.db member dump if-boolean domstore-read-access true
 allow destination com.citrix.xenclient.db interface com.citrix.xenclient.db member exists if-boolean domstore-read-access true
 
 allow destination com.citrix.xenclient.db interface com.citrix.xenclient.db member write if-boolean domstore-write-access true

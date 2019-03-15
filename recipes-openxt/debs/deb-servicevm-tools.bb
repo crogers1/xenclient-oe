@@ -7,7 +7,7 @@ DEB_PACKAGES = "\
         v4v-module \
         deb-libv4v \
         xenclient-toolstack \
-        db-tools \
+        qtdbd-tools-v4v-wrappers \
         xenclient-dbusbouncer \
         xenfb2 \
     "

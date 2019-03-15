@@ -31,6 +31,7 @@ IMAGE_INSTALL = "\
     wget \
     sync-client \
     ifplugd \
+    qtdbd-tools-v4v-wrappers \
     xenclient-syncvm-tweaks \
     ${@bb.utils.contains('DISTRO_FEATURES', 'blktap2', 'xen-blktap', 'blktap3', d)} \
 "
