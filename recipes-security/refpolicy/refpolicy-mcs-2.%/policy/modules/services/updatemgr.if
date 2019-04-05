@@ -228,3 +228,22 @@ interface(`updatemgr_dbus_chat',`
 	allow $1 updatemgr_t:dbus	send_msg;
 	allow updatemgr_t $1:dbus	send_msg;
 ')
+
+
+#######################################
+## <summary>
+##	Manange updatemgr_storage_t files
+## </summary>
+## <param name="domain">
+##	<summary>
+##	The type of process requesting file perms on updatemgr_storage_t
+##	</summary>
+## </param>
+interface(`updatemgr_manage_storage',`
+	gen_require(`
+		type updatemgr_storage_t;
+	')
+	
+	allow $1 updatemgr_storage_t:file manage_file_perms;
+')
+
