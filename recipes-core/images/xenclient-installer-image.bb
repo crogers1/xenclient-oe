@@ -63,9 +63,9 @@ post_rootfs_shell_commands() {
     sed -i '/^1:/d' ${IMAGE_ROOTFS}/etc/inittab;
     {
         echo '1:2345:once:/install/part1/autostart-main < /dev/tty1 > /dev/tty1';
-        echo '2:2345:respawn:/usr/bin/tail -F /var/log/installer > /dev/tty2';
+        echo '2:2345:respawn:/usr/bin/tail -F /var/log/installer > /dev/tty2 2>&1';
         echo '3:2345:respawn:/sbin/getty 38400 tty3';
-        echo '4:2345:respawn:/usr/bin/tail -F /var/log/messages > /dev/tty4';
+        echo '4:2345:respawn:/usr/bin/tail -F /var/log/messages > /dev/tty4 2>&1';
         echo '5:2345:respawn:/sbin/getty 38400 tty5';
         echo '6:2345:respawn:/sbin/getty 38400 tty6';
         echo '7:2345:respawn:/install/part1/autostart-status < /dev/tty7 > /dev/tty7';
