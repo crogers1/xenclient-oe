@@ -1,0 +1,22 @@
+--- a/tools/xl/xl_vmcontrol.c
++++ b/tools/xl/xl_vmcontrol.c
+@@ -1007,7 +1007,7 @@ start:
+     uint64_t need_memkb, free_memkb;
+     libxl_domain_need_memory(ctx, &d_config.b_info, &need_memkb);
+     libxl_get_free_memory(ctx, &free_memkb);
+-    if (free_memkb < need_memkb)
++    if (free_memkb < need_memkb + LIBXL_SYSTEM_RESERVED_RAM)
+     {
+         fprintf(stderr, "not enough memory to start the domain\n");
+         ret = ERROR_FAIL;
+--- a/tools/libxl/libxl.h
++++ b/tools/libxl/libxl.h
+@@ -1119,6 +1119,8 @@ const char *libxl_defbool_to_string(libx
+ 
+ #define LIBXL_TIMER_MODE_DEFAULT -1
+ #define LIBXL_MEMKB_DEFAULT ~0ULL
++/* Amount of RAM that needs to be unallocated for regular system operation */
++#define LIBXL_SYSTEM_RESERVED_RAM (256*1024)
+ 
+ /*
+  * We'd like to set a memory boundary to determine if we need to check
