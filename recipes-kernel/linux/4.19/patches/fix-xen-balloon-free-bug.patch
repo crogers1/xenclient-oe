@@ -1,0 +1,53 @@
+################################################################################
+SHORT DESCRIPTION: 
+################################################################################
+Fix bug in xen balloon driver that caused previously-ballooned memory not
+to be released back to dom0 on free, specifically when releasing memory in
+partial batches.
+
+################################################################################
+LONG DESCRIPTION: 
+################################################################################
+The patch aims to fix a side effect of the balloon driver that causes a guest
+to consume memory from dom0 and never release that memory, even on guest
+shutdown. In reality, that memory isn't leaked, it's stuck in Xen's balloon
+driver.
+
+See https://lkml.org/lkml/2019/12/11/1874 for a comprehensive look into the
+bug and why it occurs. 
+
+################################################################################
+CHANGELOG 
+################################################################################
+Original author: Nicholas Tsirakis <tsirakisn@ainfosec.com>
+
+################################################################################
+REMOVAL 
+################################################################################
+This was determined to be a bug upstream. Remove when we pull in those
+changes.
+
+################################################################################
+UPSTREAM PLAN
+################################################################################
+See above.
+
+################################################################################
+INTERNAL DEPENDENCIES 
+################################################################################
+None.
+
+################################################################################
+PATCHES 
+################################################################################
+--- a/drivers/xen/balloon.c
++++ b/drivers/xen/balloon.c
+@@ -392,7 +392,7 @@ static struct notifier_block xen_memory_
+ #else
+ static enum bp_state reserve_additional_memory(void)
+ {
+-	balloon_stats.target_pages = balloon_stats.current_pages;
++	balloon_stats.target_pages = balloon_stats.current_pages + balloon_stats.target_unpopulated;
+ 	return BP_ECANCELED;
+ }
+ #endif /* CONFIG_XEN_BALLOON_MEMORY_HOTPLUG */
