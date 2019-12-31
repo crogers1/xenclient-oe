@@ -1,0 +1,2 @@
+bindkey inputbox ^[ HELP
+bindkey inputbox2 ^[ HELP
