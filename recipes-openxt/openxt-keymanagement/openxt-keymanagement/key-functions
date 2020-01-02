@@ -348,7 +348,11 @@ recovery_unlock_boot() {
 
     local try=1
     while [ $try -le 3 ]; do
-        prompt_recovery_password $try
+        if ! prompt_recovery_password $try; then
+            try=$(( try + 1 ))
+            continue
+        fi
+
         recovery_unlock_key "${part}" "${name}" "${boot}" \
             "$( get_recovery_key )"
         ret=$?
