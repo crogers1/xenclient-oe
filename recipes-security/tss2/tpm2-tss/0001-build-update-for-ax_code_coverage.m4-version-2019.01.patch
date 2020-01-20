@@ -39,9 +39,9 @@ Signed-off-by: Jonas Witschel <diabonas@gmx.de>
 +  - tar xJf autoconf-archive-2019.01.06.tar.xz
 +  - cp autoconf-archive-2019.01.06/m4/ax_code_coverage.m4 m4/
 +  - cp autoconf-archive-2019.01.06/m4/ax_prog_doxygen.m4 m4/
+   - pip install --user cpp-coveralls
  
  before_script:
-   - ./bootstrap
 --- a/Makefile.am
 +++ b/Makefile.am
 @@ -42,7 +42,13 @@ noinst_PROGRAMS =
