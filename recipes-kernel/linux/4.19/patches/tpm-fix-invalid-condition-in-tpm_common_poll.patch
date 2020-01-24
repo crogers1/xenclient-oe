@@ -1,0 +1,75 @@
+################################################################################
+SHORT DESCRIPTION:
+################################################################################
+tpm: fix an invalid condition in tpm_common_poll
+
+################################################################################
+LONG DESCRIPTION:
+################################################################################
+Part of a patchqueue to fix the burstcount error on certain dell platforms
+
+Backport of 7110629263469 from linux-stable
+
+The poll condition should only check response_length,
+because reads should only be issued if there is data to read.
+The response_read flag only prevents double writes.
+The problem was that the write set the response_read to false,
+enqued a tpm job, and returned. Then application called poll
+which checked the response_read flag and returned EPOLLIN.
+Then the application called read, but got nothing.
+After all that the async_work kicked in.
+Added also mutex_lock around the poll check to prevent
+other possible race conditions.
+
+Fixes: 9488585b21bef0df12 ("tpm: add support for partial reads")
+
+################################################################################
+CHANGELOG
+################################################################################
+Original author: Tadeusz Struk <tadeusz.struk@intel.com>
+Port to 4.19: Bryer Esengard <esengardb@ainfosec.com>
+
+################################################################################
+REMOVAL
+################################################################################
+Once we are on kernel 5.1+ this patch can be removed
+
+################################################################################
+UPSTREAM PLAN
+################################################################################
+None.
+
+################################################################################
+INTERNAL DEPENDENCIES
+################################################################################
+tpm-add-ptr-to-tpm_space-struct-to-file_priv.patch
+tpm-add-support-for-nonblocking-operation.patch
+tpm-add-support-for-partial-reads.patch
+
+################################################################################
+PATCHES
+################################################################################
+
+--- a/drivers/char/tpm/tpm-dev-common.c
++++ b/drivers/char/tpm/tpm-dev-common.c
+@@ -203,12 +203,19 @@ __poll_t tpm_common_poll(struct file *file, poll_table *wait)
+ 	__poll_t mask = 0;
+ 
+ 	poll_wait(file, &priv->async_wait, wait);
++	mutex_lock(&priv->buffer_mutex);
+ 
+-	if (!priv->response_read || priv->response_length)
++	/*
++	 * The response_length indicates if there is still response
++	 * (or part of it) to be consumed. Partial reads decrease it
++	 * by the number of bytes read, and write resets it the zero.
++	 */
++	if (priv->response_length)
+ 		mask = EPOLLIN | EPOLLRDNORM;
+ 	else
+ 		mask = EPOLLOUT | EPOLLWRNORM;
+ 
++	mutex_unlock(&priv->buffer_mutex);
+ 	return mask;
+ }
+ 

@@ -1,0 +1,165 @@
+################################################################################
+SHORT DESCRIPTION:
+################################################################################
+tpm: tpm: introduce tpm_chip_start() and tpm_chip_stop()
+
+################################################################################
+LONG DESCRIPTION:
+################################################################################
+Part of a patchqueue to fix the burstcount error on certain dell platforms
+
+Backport of 719b7d81f2048 from linux-stable
+
+Encapsulate power gating and locality functionality to tpm_chip_start()
+and tpm_chip_stop() in order to clean up the branching mess in
+tpm_transmit().
+
+################################################################################
+CHANGELOG
+################################################################################
+Original author: Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
+Modified by: Bryer Esengard <esengard@ainfosec.com>
+Port to 4.19: Bryer Esengard <esengardb@ainfosec.com>
+
+################################################################################
+REMOVAL
+################################################################################
+Once we are on kernel 5.1+ this patch can be removed
+
+################################################################################
+UPSTREAM PLAN
+################################################################################
+None.
+
+################################################################################
+INTERNAL DEPENDENCIES
+################################################################################
+tpm-add-ptr-to-tpm_space-struct-to-file_priv.patch
+tpm-add-support-for-nonblocking-operation.patch
+tpm-add-support-for-partial-reads.patch
+tpm-fix-invalid-contition-in-tpm_common_poll.patch
+
+################################################################################
+PATCHES
+################################################################################
+
+--- a/drivers/char/tpm/tpm-chip.c
++++ b/drivers/char/tpm/tpm-chip.c
+@@ -37,6 +37,42 @@ struct class *tpm_class;
+ struct class *tpmrm_class;
+ dev_t tpm_devt;
+ 
++int tpm_chip_start(struct tpm_chip *chip, unsigned int flags)
++{
++	int ret;
++
++	if (chip->ops->clk_enable)
++		chip->ops->clk_enable(chip, true);
++
++	if (chip->locality == -1) {
++		ret = tpm_request_locality(chip, flags);
++		if (ret) {
++			chip->ops->clk_enable(chip, false);
++			return ret;
++		}
++	}
++
++	ret = tpm_cmd_ready(chip, flags);
++	if (ret) {
++		tpm_relinquish_locality(chip, flags);
++		if (chip->ops->clk_enable)
++			chip->ops->clk_enable(chip, false);
++		return ret;
++	}
++
++	return 0;
++}
++EXPORT_SYMBOL_GPL(tpm_chip_start);
++
++void tpm_chip_stop(struct tpm_chip *chip, unsigned int flags)
++{
++	tpm_go_idle(chip, flags);
++	tpm_relinquish_locality(chip, flags);
++	if (chip->ops->clk_enable)
++		chip->ops->clk_enable(chip, false);
++}
++EXPORT_SYMBOL_GPL(tpm_chip_stop);
++
+ /**
+  * tpm_try_get_ops() - Get a ref to the tpm_chip
+  * @chip: Chip to ref
+--- a/drivers/char/tpm/tpm-interface.c
++++ b/drivers/char/tpm/tpm-interface.c
+@@ -368,7 +368,7 @@ static int tpm_validate_command(struct tpm_chip *chip,
+ 	return -EINVAL;
+ }
+ 
+-static int tpm_request_locality(struct tpm_chip *chip, unsigned int flags)
++int tpm_request_locality(struct tpm_chip *chip, unsigned int flags)
+ {
+ 	int rc;
+ 
+@@ -387,7 +387,7 @@ static int tpm_request_locality(struct tpm_chip *chip, unsigned int flags)
+ 	return 0;
+ }
+ 
+-static void tpm_relinquish_locality(struct tpm_chip *chip, unsigned int flags)
++void tpm_relinquish_locality(struct tpm_chip *chip, unsigned int flags)
+ {
+ 	int rc;
+ 
+@@ -404,7 +404,7 @@ static void tpm_relinquish_locality(struct tpm_chip *chip, unsigned int flags)
+ 	chip->locality = -1;
+ }
+ 
+-static int tpm_cmd_ready(struct tpm_chip *chip, unsigned int flags)
++int tpm_cmd_ready(struct tpm_chip *chip, unsigned int flags)
+ {
+ 	if (flags & TPM_TRANSMIT_NESTED)
+ 		return 0;
+@@ -415,7 +415,7 @@ static int tpm_cmd_ready(struct tpm_chip *chip, unsigned int flags)
+ 	return chip->ops->cmd_ready(chip);
+ }
+ 
+-static int tpm_go_idle(struct tpm_chip *chip, unsigned int flags)
++int tpm_go_idle(struct tpm_chip *chip, unsigned int flags)
+ {
+ 	if (flags & TPM_TRANSMIT_NESTED)
+ 		return 0;
+@@ -615,7 +615,13 @@ ssize_t tpm_transmit(struct tpm_chip *chip, struct tpm_space *space,
+ 	memcpy(save, buf, save_size);
+ 
+ 	for (;;) {
++		ret = tpm_chip_start(chip, flags);
++		if (ret)
++			return ret;
++
+ 		ret = tpm_try_transmit(chip, space, buf, bufsiz, flags);
++
++		tpm_chip_stop(chip, flags);
+ 		if (ret < 0)
+ 			break;
+ 		rc = be32_to_cpu(header->return_code);
+--- a/drivers/char/tpm/tpm.h
++++ b/drivers/char/tpm/tpm.h
+@@ -525,6 +525,11 @@ enum tpm_transmit_flags {
+ 	TPM_TRANSMIT_NESTED      = BIT(1),
+ };
+ 
++int tpm_request_locality(struct tpm_chip *chip, unsigned int flags);
++void tpm_relinquish_locality(struct tpm_chip *chip, unsigned int flags);
++int tpm_cmd_ready(struct tpm_chip *chip, unsigned int flags);
++int tpm_go_idle(struct tpm_chip *chip, unsigned int flags);
++
+ ssize_t tpm_transmit(struct tpm_chip *chip, struct tpm_space *space,
+ 		     u8 *buf, size_t bufsiz, unsigned int flags);
+ ssize_t tpm_transmit_cmd(struct tpm_chip *chip, struct tpm_space *space,
+@@ -547,6 +552,8 @@ static inline void tpm_msleep(unsigned int delay_msec)
+ 		     delay_msec * 1000);
+ };
+ 
++int tpm_chip_start(struct tpm_chip *chip, unsigned int flags);
++void tpm_chip_stop(struct tpm_chip *chip, unsigned int flags);
+ struct tpm_chip *tpm_find_get_ops(struct tpm_chip *chip);
+ __must_check int tpm_try_get_ops(struct tpm_chip *chip);
+ void tpm_put_ops(struct tpm_chip *chip);

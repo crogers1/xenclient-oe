@@ -45,6 +45,12 @@ SRC_URI += "${KERNELORG_MIRROR}/linux/kernel/v${PV_MAJOR}.x/linux-${PV}.tar.xz;n
     file://xsa-155-qsb-023-xen-netfront-copy-response-out-of-shared-buffer-befo.patch \
     file://xsa-155-qsb-023-xen-netfront-do-not-use-data-already-exposed-to-back.patch \
     file://fix-xen-balloon-free-bug.patch \
+    file://tpm-add-ptr-to-tpm_space-struct-to-file_priv.patch \
+    file://tpm-add-support-for-nonblocking-operation.patch \
+    file://tpm-add-support-for-partial-reads.patch \
+    file://tpm-fix-invalid-condition-in-tpm_common_poll.patch \
+    file://tpm-introduce-tpm_chip_start-and-tpm_chip_stop.patch \
+    file://tpm-take-chip-power-gating-out-of-tpm_transmit.patch \
     file://defconfig \
     "
 
