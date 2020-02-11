@@ -31,11 +31,14 @@ contains_only() {
 
 usage() {
     cat <<EOF >&2
-Usage: seal-system [-h] [-s|-u|-f] [-ctpgbr path] -[48 object[,objects]]"
+Usage: seal-system [-h] [-s|-u|-f|-l] [-L] [-D] [-ctpgbr path] -[48 object[,objects]]"
   -h      Display this usage.
   -s      Seal operation.
   -u      Unseal operation.
   -f      Forward sealing operation.
+  -l      Check for presence of pcr4 string literal
+  -L      When forward sealing, extend the TCG pcr4 string literal before ev_separator
+  -D      Don't do the default check for string literal
   -c path Path to configuration key.
   -t path Path to sealed key.
   -p path Path to pcr list file.
@@ -74,6 +77,8 @@ tpm_ver="$(get_tpm_version)"
 
 # Configurables
 operation="seal"
+use_literal="no"
+skip_literal_check="no"
 config_key="/config/keys/config.key"
 sealed_key="/boot/system/tpm/config.tss"
 config_pcrs="/config/config.pcrs"
@@ -105,11 +110,14 @@ pcr8_objs=(
     /boot/microcode_intel.bin
 )
 
-while getopts ":sufc:t:p:g:b:r:4:8:h" opt; do
+while getopts ":suflLDc:t:p:g:b:r:4:8:h" opt; do
     case "${opt}" in
     s) operation="seal" ;;
     u) operation="unseal" ;;
     f) operation="forward" ;;
+    l) operation="literal" ;;
+    L) use_literal="yes" ;;
+    D) skip_literal_check="yes" ;;
     c) config_key="${OPTARG}" ;;
     t) sealed_key="${OPTARG}" ;;
     p) config_pcrs="${OPTARG}" ;;
@@ -159,6 +167,21 @@ forward)
         ev_separator="$(tpm_get_ev_separator)"
 
         pcr4=$(hash_extend 0 "${ev_separator}" "${hashalg}")
+
+        if [[ "${skip_literal_check}" == "no" ]]; then
+            platform_needs_pcr4_literal "${ev_separator}" "${hashalg}"
+            if [ $? -eq 0 ]; then
+                use_literal="yes"
+            fi
+        fi
+
+        if [[ "${use_literal}" == "yes" ]]; then
+            app=$(echo -n "Calling EFI Application from Boot Option" | ${hashalg}sum | awk '{print $1}')
+            pcr4=$(hash_extend 0 "${app}" "${hashalg}")
+            pcr4=$(hash_extend $pcr4 "${ev_separator}" "${hashalg}")
+        else
+            pcr4=$(hash_extend 0 "${ev_separator}" "${hashalg}")
+        fi
 
         hash=$(pesign -h -d "${hashalg}" -i "${pcr4_objs[0]}" | awk '{ print $2 }')
         pcr4=$(hash_extend "${pcr4}" "${hash}" "${hashalg}") ||
@@ -242,6 +265,25 @@ forward)
     fi
 
     exit 0
+;;
+literal)
+    [ "${tpm_ver}" = "2.0" ] && hashalg="sha256"
+
+    if [ "${tpm_ver}" = "2.0" ]; then
+        pcr8=$(tpm2_listpcrs | grep PCR_08 | cut -f2 -d: | tr -d ' ' | tail -n1)
+    else
+        pcr8=$(grep PCR-08 ${TPM_DEV}/pcrs | cut -f2 -d: | tr -d ' ')
+    fi
+
+    if ! contains_only "${pcr8}" 0; then
+        ev_separator="$(tpm_get_ev_separator)"
+        platform_needs_pcr4_literal "${ev_separator}" "${hashalg}"
+        if [ $? -eq 0 ]; then
+            exit 0
+        fi
+    fi
+    # Either not EFI or the platform isn't using the pcr4 string literal
+    exit 1
 ;;
 unseal)
     if [ ! -e "${sealed_key}.${hashalg}" ]; then

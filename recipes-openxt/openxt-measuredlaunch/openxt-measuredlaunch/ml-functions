@@ -697,3 +697,63 @@ configure_measured_launch()
     echo "${key_file}"
     return 0
 }
+
+
+#
+# Calculate pcr4 with pcr4 literal and compare with active pcr4
+# value. If they're the same we need to make sure we extend the
+# string literal for a forward seal. Not all firmware on all
+# vendors follow this part of the spec yet, so we have to detect
+# it the best we can.
+#
+# We can use the boot modules in /boot since the time this function
+# is called, the EFI partition has been written to with the upgraded
+# boot modules. 
+#
+platform_needs_pcr4_literal() {
+    ev_separator="$1"
+    hashalg="$2"
+
+    is_tpm_2_0
+    tpm2=$?
+
+    app=$(echo -n "Calling EFI Application from Boot Option" | ${hashalg}sum | awk '{print $1}')
+    pcr4=$(hash_extend 0 "${app}" "${hashalg}")
+    pcr4=$(hash_extend $pcr4 "${ev_separator}" "${hashalg}")
+
+    hash=$(pesign -h -d ${hashalg} -i /boot/shimx64.efi | awk '{ print $2 }')
+    pcr4=$(hash_extend $pcr4 $hash $hashalg) ||
+        err "failed to calculate pcr4"
+
+    hash=$(${hashalg}sum /boot/xen.efi | awk '{ print $1 }')
+    pcr4=$(hash_extend $pcr4 $hash $hashalg) ||
+        err "failed to calculate pcr4"
+
+    hash=$(${hashalg}sum /boot/bzImage | awk '{ print $1 }')
+    pcr4=$(hash_extend $pcr4 $hash $hashalg) ||
+        err "failed to calculate pcr4"
+
+    cp /boot/tboot.gz /tmp
+    gunzip /tmp/tboot.gz
+    hash=$(${hashalg}sum /tmp/tboot | awk '{ print $1 }')
+    pcr4=$(hash_extend $pcr4 $hash $hashalg) ||
+        err "failed to calculate pcr4"
+    rm /tmp/tboot
+
+    hash=$(${hashalg}sum /boot/xen.efi | awk '{ print $1 }')
+    pcr4=$(hash_extend $pcr4 $hash $hashalg) ||
+        err "failed to calculate pcr4"
+
+    if [ "${tpm2}" -eq 0 ]; then
+        pcr4_sys=$(tpm2_listpcrs | grep PCR_04 | cut -f2 -d: | tr -d ' ' | tail -n1)
+    else
+        pcr4_sys=$(grep PCR-04 ${TPM_DEV}/pcrs | cut -f2 -d: | tr -d ' ')
+    fi
+
+    if [[ "${pcr4}" == "${pcr4_sys}" ]]; then
+        return 0
+    fi
+
+    return 1
+
+}
