@@ -52,6 +52,7 @@ SRC_URI += "${KERNELORG_MIRROR}/linux/kernel/v${PV_MAJOR}.x/linux-${PV}.tar.xz;n
     file://tpm-introduce-tpm_chip_start-and-tpm_chip_stop.patch \
     file://tpm-take-chip-power-gating-out-of-tpm_transmit.patch \
     file://defconfig \
+    file://e1000e_rx_crc.patch \
     "
 
 LIC_FILES_CHKSUM = "file://COPYING;md5=bbea815ee2795b2f4230826c0c6b8814"

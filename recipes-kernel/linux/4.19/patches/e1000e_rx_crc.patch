@@ -1,0 +1,45 @@
+Changes sourced from:
+https://kernel.ubuntu.com/git/kernel-ppa/mirror/ubuntu-oem-osp1-bionic.git/commit/?h=oem&id=e339e91236f75696594be43ff4a937a2fc8dbc1e
+https://kernel.ubuntu.com/git/kernel-ppa/mirror/ubuntu-oem-osp1-bionic.git/commit/?h=oem&id=ef8ba95a9dd8713d2c3b7db14641fdcf66b84875
+
+Fixing the bug listed here:
+https://bugs.launchpad.net/ubuntu/+source/linux/+bug/1836152
+--- a/drivers/net/ethernet/intel/e1000e/hw.h
++++ b/drivers/net/ethernet/intel/e1000e/hw.h
+@@ -662,6 +662,7 @@ struct e1000_dev_spec_ich8lan {
+ 	bool kmrn_lock_loss_workaround_enabled;
+ 	struct e1000_shadow_ram shadow_ram[E1000_ICH8_SHADOW_RAM_WORDS];
+ 	bool nvm_k1_enabled;
++	bool disable_k1_off;
+ 	bool eee_disable;
+ 	u16 eee_lp_ability;
+ 	enum e1000_ulp_state ulp_state;
+--- a/drivers/net/ethernet/intel/e1000e/ich8lan.c
++++ b/drivers/net/ethernet/intel/e1000e/ich8lan.c
+@@ -1430,6 +1430,17 @@ static s32 e1000_check_for_copper_link_i
+ 				phy_reg |= 0xFA;
+ 			e1e_wphy_locked(hw, I217_PLL_CLOCK_GATE_REG, phy_reg);
+ 		}
++
++		if (speed == SPEED_1000) {
++			hw->phy.ops.read_reg_locked(hw, HV_PM_CTRL,
++					&phy_reg);
++
++			phy_reg |= HV_PM_CTRL_K1_CLK_REQ;
++
++			hw->phy.ops.write_reg_locked(hw, HV_PM_CTRL,
++					phy_reg);
++		}
++
+ 		hw->phy.ops.release(hw);
+ 
+ 		if (ret_val)
+@@ -1528,6 +1539,9 @@ static s32 e1000_check_for_copper_link_i
+ 				fextnvm6 &= ~E1000_FEXTNVM6_K1_OFF_ENABLE;
+ 		}
+ 
++		if (hw->dev_spec.ich8lan.disable_k1_off == true)
++			fextnvm6 &= ~E1000_FEXTNVM6_K1_OFF_ENABLE;
++
+ 		ew32(FEXTNVM6, fextnvm6);
+ 	}
