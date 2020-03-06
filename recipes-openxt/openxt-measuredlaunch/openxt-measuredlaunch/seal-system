@@ -270,7 +270,7 @@ literal)
     [ "${tpm_ver}" = "2.0" ] && hashalg="sha256"
 
     if [ "${tpm_ver}" = "2.0" ]; then
-        pcr8=$(tpm2_listpcrs | grep PCR_08 | cut -f2 -d: | tr -d ' ' | tail -n1)
+        pcr8=$(tpm2_pcrlist -L sha256:8 | cut -f2 -d: | tr -d ' ' | tail -n1)
     else
         pcr8=$(grep PCR-08 ${TPM_DEV}/pcrs | cut -f2 -d: | tr -d ' ')
     fi

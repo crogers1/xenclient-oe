@@ -745,7 +745,7 @@ platform_needs_pcr4_literal() {
         err "failed to calculate pcr4"
 
     if [ "${tpm2}" -eq 0 ]; then
-        pcr4_sys=$(tpm2_listpcrs | grep PCR_04 | cut -f2 -d: | tr -d ' ' | tail -n1)
+        pcr4_sys=$(tpm2_pcrlist -L sha256:4 | cut -f2 -d: | tr -d ' ' | tail -n1)
     else
         pcr4_sys=$(grep PCR-04 ${TPM_DEV}/pcrs | cut -f2 -d: | tr -d ' ')
     fi
