@@ -1,0 +1,68 @@
+################################################################################
+SHORT DESCRIPTION: 
+################################################################################
+Re-enable interrupts before loading PNVM.
+
+################################################################################
+LONG DESCRIPTION: 
+################################################################################
+For cards in the AX210+ family that advertise a SKU and try to load a PNVM,
+in the non-MSIX (MSI) case the normal firmware load flow disables all interrupts
+from the card except ALIVE and RX. This is primarily to enforce the driver's
+assumption that we will not receive RF_KILL before the firmware has finished
+loading, or else an unintelligible error is dumped.  
+
+This unfortunately also prevents us from responding to an interrupt from the 
+card after 'kicking the doorbell' (UREG_DOORBELL_TO_ISR6_PNVM). We therefore
+wait until the specified timeout and report "Timeout waiting for PNVM load!"
+and fail out of driver initialization.
+
+This patch re-enables interrupts prior to loading the PNVM so we can respond
+properly when the card notifies us of a successful PNVM load. Since the FW is
+technically 'ALIVE' at this point, it should be ok to also re-enable RF_KILL.
+
+################################################################################
+CHANGELOG 
+################################################################################
+Original author: Chris Rogers <crogers122@gmail.com>
+
+################################################################################
+REMOVAL 
+################################################################################
+Upstream it.
+
+################################################################################
+UPSTREAM PLAN
+################################################################################
+Submit to linux-wireless, if they are interested in the MSI case.  Not sure if
+this is the _right_ way to handle this particular case, but it was effective.
+Ultimately linux-wireless devs would know best if it is NOT ok to re-enable the 
+RF_KILL interrupt before the PNVM is loaded.
+
+################################################################################
+INTERNAL DEPENDENCIES 
+################################################################################
+None.
+
+################################################################################
+PATCHES 
+################################################################################
+
+--- a/drivers/net/wireless/intel/iwlwifi/mvm/fw.c
++++ b/drivers/net/wireless/intel/iwlwifi/mvm/fw.c
+@@ -334,6 +334,15 @@ static int iwl_mvm_load_ucode_wait_alive
+ 		return -EIO;
+ 	}
+ 
++	/* 
++	 * re-enable interrupts so we can get a response from
++	 * the card when kicking the doorbell during pnvm load.
++	 * This is only needed in the non-msix case. FW is
++	 * technically alive at this point so re-enabling rf-kill
++	 * interrupt is probably ok.
++	 */
++	iwl_trans_interrupts(mvm->trans, true);
++
+ 	ret = iwl_pnvm_load(mvm->trans, &mvm->notif_wait);
+ 	if (ret) {
+ 		IWL_ERR(mvm, "Timeout waiting for PNVM load!\n");
