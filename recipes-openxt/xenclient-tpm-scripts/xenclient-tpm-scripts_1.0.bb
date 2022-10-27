@@ -10,12 +10,12 @@ SRC_URI = " \
     file://pcr1-fix.sh \
 "
 
-RDEPENDS_${PN} = " \
+RDEPENDS:${PN} = " \
     tpm-tools \
     tpm2-tools \
 "
 
-FILES_${PN} = "${libdir}/tpm-scripts"
+FILES:${PN} = "${libdir}/tpm-scripts"
 
 do_install() {
 	install -d ${D}${libdir}/tpm-scripts

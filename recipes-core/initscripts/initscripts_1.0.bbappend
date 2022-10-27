@@ -1,6 +1,6 @@
 PR .= ".1"
 
-FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}-${PV}:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}-${PV}:"
 
 SRC_URI += " \
     file://functions-selinux \
@@ -80,12 +80,12 @@ do_install () {
 	update-rc.d -r ${D} udev-volatiles.sh start 03 S .
 }
 
-do_install_append_openxt-installer() {
+do_install:append:openxt-installer() {
 	install -m 0755    ${WORKDIR}/mountefi.sh	${D}${sysconfdir}/init.d
 	update-rc.d -r ${D} mountefi.sh start 36 S .
 }
 
-pkg_postinst_${PN}_append() {
+pkg_postinst:${PN}:append() {
     if [ -n "$D" ]; then
         $D/etc/init.d/populate-volatile.sh update
     fi

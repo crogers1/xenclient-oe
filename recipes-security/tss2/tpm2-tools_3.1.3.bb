@@ -20,8 +20,8 @@ S = "${WORKDIR}/git"
 inherit autotools pkgconfig
 
 PACKAGES =+ "tpm2-tools-initrd"
-FILES_${PN}-initrd = " \
+FILES:${PN}-initrd = " \
     ${bindir}/tpm2_pcrlist \
     ${bindir}/tpm2_extendpcr \
 "
-RDEPENDS_${PN} += "${PN}-initrd"
+RDEPENDS:${PN} += "${PN}-initrd"

@@ -21,11 +21,11 @@ inherit autotools pkgconfig
 PACKAGES =+ " \
     resourcemgr \
 "
-FILES_resourcemgr = " \
+FILES:resourcemgr = " \
     ${sbindir}/resourcemgr \
 "
 
-do_configure_prepend () {
+do_configure:prepend () {
     # Creates the src_vars.mk file used by automake to handle source-files for
     # each component. Modified to not call autotools and let OE handle that.
     cd ${S}

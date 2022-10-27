@@ -49,21 +49,21 @@ SRC_URI += " \
 SRC_URI[sha256sum] = "46ba1f2a0a2ed7aabe20f9b7b2a8d717cb0b514cea83c7a1a24fe25f6b208784"
 
 USERADD_PACKAGES = "${PN}"
-USERADD_PARAM_${PN} = "--system --no-create-home \
+USERADD_PARAM:${PN} = "--system --no-create-home \
                        --shell /bin/false \
                        --groups varstored \
                        --gid 415 \
                        --uid 416 \
                        varstored"
-GROUPADD_PARAM_${PN} = "--system --gid 415 varstored"
+GROUPADD_PARAM:${PN} = "--system --gid 415 varstored"
 
-do_configure_append() {
+do_configure:append() {
     mkdir -p rpcgen
     xc-rpcgen --templates-dir=${STAGING_RPCGENDATADIR_NATIVE} -c -o rpcgen ${STAGING_IDLDATADIR}/db.xml
 }
 
 # generate auth signing keys
-do_compile_append() {
+do_compile:append() {
     openssl x509 -inform DER -in ${WORKDIR}/MicCorUEFCA2011_2011-06-27.crt -outform PEM -out ${S}/MicCorUEFCA2011_2011-06-27.pem -text
     openssl x509 -inform DER -in ${WORKDIR}/MicWinProPCA2011_2011-10-19.crt -outform PEM -out ${S}/MicWinProPCA2011_2011-10-19.pem -text
     openssl x509 -inform DER -in ${WORKDIR}/MicCorKEKCA2011_2011-06-24.crt -outform PEM -out ${S}/MicCorKEKCA2011_2011-06-24.pem
