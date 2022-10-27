@@ -27,7 +27,7 @@ SRC_URI = " \
     file://0001-Fixed-configure.ac-Fix-pkgconfig-sysroot-locations.patch \
     file://0002-Do-not-create-settings-settings-property-documentati.patch \
 "
-SRC_URI_append_libc-musl = " \
+SRC_URI:append:libc-musl = " \
     file://musl/0001-Fix-build-with-musl-systemd-specific.patch \
     file://musl/0002-Fix-build-with-musl.patch \
 "
@@ -48,11 +48,11 @@ EXTRA_OECONF = " \
 # stolen from https://github.com/void-linux/void-packages/blob/master/srcpkgs/NetworkManager/template
 # avoids:
 # | ../NetworkManager-1.16.0/libnm-core/nm-json.c:106:50: error: 'RTLD_DEEPBIND' undeclared (first use in this function); did you mean 'RTLD_DEFAULT'?
-CFLAGS_append_libc-musl = " \
+CFLAGS:append:libc-musl = " \
     -DRTLD_DEEPBIND=0 \
 "
 
-do_compile_prepend() {
+do_compile:prepend() {
     export GIR_EXTRA_LIBS_PATH="${B}/libnm/.libs:${B}/libnm-glib/.libs:${B}/libnm-util/.libs"
 }
 
@@ -87,13 +87,13 @@ PACKAGES =+ "libnmutil libnmglib libnmglib-vpn \
   ${PN}-adsl \
 "
 
-FILES_libnmutil += "${libdir}/libnm-util.so.*"
-FILES_libnmglib += "${libdir}/libnm-glib.so.*"
-FILES_libnmglib-vpn += "${libdir}/libnm-glib-vpn.so.*"
+FILES:libnmutil += "${libdir}/libnm-util.so.*"
+FILES:libnmglib += "${libdir}/libnm-glib.so.*"
+FILES:libnmglib-vpn += "${libdir}/libnm-glib-vpn.so.*"
 
-FILES_${PN}-adsl = "${libdir}/NetworkManager/${PV}/libnm-device-plugin-adsl.so"
+FILES:${PN}-adsl = "${libdir}/NetworkManager/${PV}/libnm-device-plugin-adsl.so"
 
-FILES_${PN} += " \
+FILES:${PN} += " \
     ${libexecdir} \
     ${libdir}/NetworkManager/${PV}/*.so \
     ${nonarch_libdir}/NetworkManager/VPN \
@@ -105,38 +105,38 @@ FILES_${PN} += " \
     ${libdir}/pppd \
 "
 
-RRECOMMENDS_${PN} += "iptables \
+RRECOMMENDS:${PN} += "iptables \
     ${@bb.utils.filter('PACKAGECONFIG', 'dnsmasq', d)} \
 "
-RCONFLICTS_${PN} = "connman"
+RCONFLICTS:${PN} = "connman"
 
-FILES_${PN}-dev += " \
+FILES:${PN}-dev += " \
     ${datadir}/NetworkManager/gdb-cmd \
     ${libdir}/pppd/*/*.la \
     ${libdir}/NetworkManager/*.la \
     ${libdir}/NetworkManager/${PV}/*.la \
 "
 
-FILES_${PN}-nmtui = " \
+FILES:${PN}-nmtui = " \
     ${bindir}/nmtui \
     ${bindir}/nmtui-edit \
     ${bindir}/nmtui-connect \
     ${bindir}/nmtui-hostname \
 "
 
-FILES_${PN}-nmtui-doc = " \
+FILES:${PN}-nmtui-doc = " \
     ${mandir}/man1/nmtui* \
 "
 
 INITSCRIPT_NAME = "network-manager"
-SYSTEMD_SERVICE_${PN} = "${@bb.utils.contains('PACKAGECONFIG', 'systemd', 'NetworkManager.service NetworkManager-dispatcher.service', '', d)}"
+SYSTEMD_SERVICE:${PN} = "${@bb.utils.contains('PACKAGECONFIG', 'systemd', 'NetworkManager.service NetworkManager-dispatcher.service', '', d)}"
 
 ALTERNATIVE_PRIORITY = "100"
-ALTERNATIVE_${PN} = "${@bb.utils.contains('DISTRO_FEATURES','systemd','resolv-conf','',d)}"
+ALTERNATIVE:${PN} = "${@bb.utils.contains('DISTRO_FEATURES','systemd','resolv-conf','',d)}"
 ALTERNATIVE_TARGET[resolv-conf] = "${@bb.utils.contains('DISTRO_FEATURES','systemd','${sysconfdir}/resolv-conf.NetworkManager','',d)}"
 ALTERNATIVE_LINK_NAME[resolv-conf] = "${@bb.utils.contains('DISTRO_FEATURES','systemd','${sysconfdir}/resolv.conf','',d)}"
 
-do_install_append() {
+do_install:append() {
     install -Dm 0755 ${WORKDIR}/${BPN}.initd ${D}${sysconfdir}/init.d/network-manager
 
     rm -rf ${D}/run ${D}${localstatedir}/run

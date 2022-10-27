@@ -24,21 +24,21 @@ EXTRA_OECONF = " \
 "
 
 # gobject-introspection related
-GI_DATA_ENABLED_libc-musl = "False"
+GI_DATA_ENABLED:libc-musl = "False"
 
-do_compile_prepend() {
+do_compile:prepend() {
     export GIR_EXTRA_LIBS_PATH="${B}/src/libnma/.libs"
 }
 
-RDEPENDS_${PN} =+ "networkmanager"
+RDEPENDS:${PN} =+ "networkmanager"
 
-FILES_${PN} += " \
+FILES:${PN} += " \
     ${datadir}/nm-applet/ \
     ${datadir}/libnma/wifi.ui \
     ${datadir}/metainfo \
 "
 
 # musl builds generate gir files which otherwise go un-packaged
-FILES_${PN}-dev += " \
+FILES:${PN}-dev += " \
     ${datadir}/gir-1.0 \
 "
