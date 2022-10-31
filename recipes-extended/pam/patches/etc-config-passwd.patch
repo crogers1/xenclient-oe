@@ -15,10 +15,10 @@ index 7145617..d6c7874 100644
  			security_context_t create_context;
  			int rc;
  
--			if(getfilecon("/etc/passwd", &create_context))
-+			if(getfilecon("/config/etc/passwd", &create_context))
+-			if(getfilecon_raw("/etc/passwd", &create_context_raw))
++			if(getfilecon_raw("/config/etc/passwd", &create_context_raw))
  				return -1;
- 			rc = setfscreatecon(create_context);
+ 			rc = setfscreatecon_raw(create_context_raw);
  			freecon(create_context);
 diff --git a/modules/pam_unix/passverify.c b/modules/pam_unix/passverify.c
 index 4840bb2..749a601 100644
@@ -58,21 +58,21 @@ index 4840bb2..749a601 100644
 @@ -582,7 +582,7 @@ save_old_password(pam_handle_t *pamh, const char *forwho, const char *oldpass,
  #ifdef WITH_SELINUX
      if (SELINUX_ENABLED) {
-       security_context_t passwd_context=NULL;
--      if (getfilecon("/etc/passwd",&passwd_context)<0) {
-+      if (getfilecon("/config/etc/passwd",&passwd_context)<0) {
+       char *passwd_context_raw = NULL;
+-      if (getfilecon_raw("/etc/passwd",&passwd_context_raw)<0) {
++      if (getfilecon_raw("/config/etc/passwd",&passwd_context_raw)<0) {
          return PAM_AUTHTOK_ERR;
        };
-       if (getfscreatecon(&prev_context)<0) {
+       if (getfscreatecon_raw(&prev_context_raw)<0) {
 @@ -732,7 +732,7 @@ PAMH_ARG_DECL(int unix_update_passwd,
  #ifdef WITH_SELINUX
      if (SELINUX_ENABLED) {
-       security_context_t passwd_context=NULL;
--      if (getfilecon("/etc/passwd",&passwd_context)<0) {
-+      if (getfilecon("/config/etc/passwd",&passwd_context)<0) {
+       char *passwd_context_raw = NULL;
+-      if (getfilecon_raw("/etc/passwd",&passwd_context_raw)<0) {
++      if (getfilecon_raw("/config/etc/passwd",&passwd_context_raw)<0) {
  	return PAM_AUTHTOK_ERR;
        };
-       if (getfscreatecon(&prev_context)<0) {
+       if (getfscreatecon_raw(&prev_context_raw)<0) {
 @@ -754,7 +754,7 @@ PAMH_ARG_DECL(int unix_update_passwd,
        goto done;
      }
@@ -94,12 +94,12 @@ index 4840bb2..749a601 100644
 @@ -857,7 +857,7 @@ PAMH_ARG_DECL(int unix_update_shadow,
  #ifdef WITH_SELINUX
      if (SELINUX_ENABLED) {
-       security_context_t shadow_context=NULL;
--      if (getfilecon("/etc/shadow",&shadow_context)<0) {
-+      if (getfilecon("/config/etc/shadow",&shadow_context)<0) {
+       char *shadow_context_raw = NULL;
+-      if (getfilecon_raw("/etc/shadow",&shadow_context_raw)<0) {
++      if (getfilecon_raw("/config/etc/shadow",&shadow_context_raw)<0) {
  	return PAM_AUTHTOK_ERR;
        };
-       if (getfscreatecon(&prev_context)<0) {
+       if (getfscreatecon(&prev_context_raw)<0) {
 @@ -879,7 +879,7 @@ PAMH_ARG_DECL(int unix_update_shadow,
  	goto done;
      }
