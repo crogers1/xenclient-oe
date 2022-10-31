@@ -20,7 +20,7 @@ S = "${WORKDIR}/git"
 inherit ocaml findlib
 
 # ocamlc could determine this in the build-system, but does not currently.
-CFLAGS:append += "-I${ocamlincdir}"
+CFLAGS:append = " -I${ocamlincdir}"
 do_compile() {
     oe_runmake V=1 XEN_DIST_ROOT="${STAGING_DIR_HOST}"
 }

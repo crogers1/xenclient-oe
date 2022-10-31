@@ -18,7 +18,7 @@ S = "${WORKDIR}/git"
 # Hack to get CFLAGS not wiped out by OE
 EXTRA_OEMAKE = ""
 
-CFLAGS:append += "-Wno-deprecated-declarations"
+CFLAGS:append = " -Wno-deprecated-declarations"
 
 inherit pkgconfig
 
