@@ -36,7 +36,7 @@ INITSCRIPT_PARAMS = "defaults 85 15"
 
 S = "${WORKDIR}/git"
 
-inherit distutils3
+inherit setuptools3
 inherit update-rc.d
 
 FILES:${PN} += "/etc/init.d/${INITSCRIPT_NAME}"
