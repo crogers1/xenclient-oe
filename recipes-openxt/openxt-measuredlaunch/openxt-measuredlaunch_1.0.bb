@@ -28,7 +28,6 @@ do_install() {
 
 RDEPENDS:${PN} = " \
     bash \
-    tboot-lcptools \
     tboot-lcptools-v2 \
     tboot-utils \
     tboot-pcr-calc \

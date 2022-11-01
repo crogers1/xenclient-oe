@@ -111,8 +111,8 @@ index 2ef127e..d896740 100644
  include Config.mk
  
  # (txt-test is not included because it requires pathing to Linux src)
--SUBDIRS := tboot safestringlib lcptools lcptools-v2 tb_polgen utils docs
-+SUBDIRS := tboot safestringlib lcptools lcptools-v2 tb_polgen utils pcr-calc docs
+-SUBDIRS := tboot safestringlib lcptools-v2 tb_polgen utils docs
++SUBDIRS := tboot safestringlib lcptools-v2 tb_polgen utils pcr-calc docs
  
  #
  # build rules

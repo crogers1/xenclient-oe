@@ -1,7 +1,7 @@
 require tboot.inc
 
 LICENSE = "BSD-3-Clause"
-LIC_FILES_CHKSUM = "file://COPYING;md5=7730ab1e15a162ca347bcc1722486d89"
+LIC_FILES_CHKSUM = "file://COPYING;md5=b86c2f3e88dffdbc026c71e2a818c70c"
 
 S = "${WORKDIR}/${PN}-${PV}"
 
@@ -18,8 +18,8 @@ SRC_URI = " \
     file://0009-Find-e820-regions-that-include-the-limit.patch \
     file://0010-Add-support-for-launching-64-bit-PE-kernels.patch \
 "
-SRC_URI[md5sum] = "29cc2524e48eaba12249d3476be219b2"
-SRC_URI[sha256sum] = "007212deacab8eb159d71449766f9b2e0523439f1c4fd64d1932eb38cb60e053"
+#SRC_URI[md5sum] = "29cc2524e48eaba12249d3476be219b2"
+SRC_URI[sha256sum] = "8849fa999d2db83040d5ad8f3a924405a20cd133150e885b56fa7fe8e3b89c06"
 
 inherit deploy
 
@@ -35,7 +35,7 @@ do_compile() {
         # Clean and rebuild for now.
         oe_runmake SUBDIRS="safestringlib" clean
     fi
-    oe_runmake SUBDIRS="safestringlib lcptools lcptools-v2 tb_polgen utils pcr-calc" TARGET_ARCH="${TBOOT_TARGET_ARCH}"
+    oe_runmake SUBDIRS="safestringlib lcptools-v2 tb_polgen utils pcr-calc" TARGET_ARCH="${TBOOT_TARGET_ARCH}"
 }
 
 do_deploy() {

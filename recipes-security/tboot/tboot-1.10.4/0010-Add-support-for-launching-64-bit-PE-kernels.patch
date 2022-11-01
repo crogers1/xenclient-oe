@@ -33,7 +33,7 @@ index 4c9fe51..e763a4a 100644
 @@ -21,6 +21,7 @@ obj-y += common/policy.o common/printk.o common/rijndael.o common/sha1.o
  obj-y += common/strcmp.o common/strlen.o common/strncmp.o common/strncpy.o
  obj-y += common/strtoul.o common/tb_error.o common/tboot.o common/tpm.o
- obj-y += common/vga.o common/vmac.o common/vsprintf.o common/lz.o
+ obj-y += common/vga.o common/vsprintf.o common/lz.o common/memlog.o
 +obj-y += common/pe.o common/paging_64.o
  obj-y += txt/acmod.o txt/errors.o txt/heap.o txt/mtrrs.o txt/txt.o
  obj-y += txt/verify.o txt/vmcs.o
@@ -664,9 +664,9 @@ index c4f258f..99ff765 100644
 --- a/tboot/include/loader.h
 +++ b/tboot/include/loader.h
 @@ -104,6 +104,7 @@ extern bool get_loader_efi_ptr(loader_ctx *lctx, uint32_t *address,
-                                uint64_t *long_address);
  extern void load_framebuffer_info(loader_ctx *lctx, void *vscr);
  extern char *get_first_module_cmd(loader_ctx *lctx);
+ extern struct mb2_fb* get_framebuffer_info(loader_ctx *lctx);
 +extern uint32_t get_lowest_mod_start(loader_ctx *lctx);
  
  #endif /* __LOADER_H__ */

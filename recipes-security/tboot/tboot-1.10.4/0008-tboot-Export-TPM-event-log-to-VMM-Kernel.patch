@@ -48,19 +48,9 @@ index abb1ca4..3bec9e8 100644
 +#define PRIu64		__PRI64_PREFIX "u"
 +#define PRIx64		__PRI64_PREFIX "x"
 +
- static inline void print_tboot_shared(const tboot_shared_t *tboot_shared)
- {
-     printk(TBOOT_DETA"tboot_shared data:\n");
-@@ -163,6 +181,9 @@ static inline void print_tboot_shared(const tboot_shared_t *tboot_shared)
-     printk(TBOOT_DETA"\t flags: 0x%8.8x\n", tboot_shared->flags);
-     printk(TBOOT_DETA"\t ap_wake_addr: 0x%08x\n", (uint32_t)tboot_shared->ap_wake_addr);
-     printk(TBOOT_DETA"\t ap_wake_trigger: %u\n", tboot_shared->ap_wake_trigger);
-+    printk(TBOOT_DETA"\t evt_log_region: 0x%"PRIx64"\n", tboot_shared->evt_log_region);
-+    printk(TBOOT_DETA"\t evt_log_size: 0x%"PRIx64"\n", tboot_shared->evt_log_size);
-+    printk(TBOOT_DETA"\t evt_log_format: 0x%02x\n", tboot_shared->evt_log_format);
- }
- 
  #endif    /* __TBOOT_H__ */
+ 
+ /*
 diff --git a/tboot/common/tboot.c b/tboot/common/tboot.c
 index 37a2923..e5abe56 100644
 --- a/tboot/common/tboot.c
@@ -166,8 +156,8 @@ index 0b7c814..9f255d0 100644
          return false;
      }
  
--    event = (tcg_pcr_event2*)(void *)(unsigned long)g_elog_2_1->phys_addr +
--        g_elog_2_1->next_record_offset;
+-    event = (tcg_pcr_event2*)(void *)(unsigned long)(g_elog_2_1->phys_addr +
+-        g_elog_2_1->next_record_offset);
 +    event = (tcg_pcr_event2*)(uintptr_t)(g_elog_2_1->phys_addr + g_elog_2_1->next_record_offset);
      event->pcr_index = pcr;
      event->event_type = type;
