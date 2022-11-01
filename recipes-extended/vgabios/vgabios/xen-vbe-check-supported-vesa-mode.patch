@@ -45,7 +45,7 @@ PATCHES
 ################################################################################
 --- a/vbe.c
 +++ b/vbe.c
-@@ -941,10 +941,22 @@ Bit16u *AX;Bit16u CX; Bit16u ES;Bit16u D
+@@ -1274,11 +1274,23 @@ Bit16u *AX;Bit16u CX; Bit16u ES;Bit16u D
  
          if (cur_info != 0)
          {
@@ -58,6 +58,7 @@ PATCHES
  #ifdef DEBUG
                  printf("VBE found mode %x\n",CX);
  #endif
+                 memsetb(ss, &info, 0, sizeof(ModeInfoBlock));
                  memcpyb(ss, &info, 0xc000, &(cur_info->info), sizeof(ModeInfoBlockCompact));
 +                size_64k = size64(info.XResolution, info.YResolution, info.BitsPerPixel);
 +                if ((info.XResolution > dispi_get_max_xres()) ||

@@ -55,6 +55,7 @@ PATCHES
          ModeInfoListItem  *cur_info;
          Boolean           using_lfb;
          Bit16u            lfb_addr;
+         Bit16u            support_bank_gr_32k;
 +        ModeInfoBlockCompact   info;
  
  #ifdef DEBUG
