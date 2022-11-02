@@ -44,67 +44,52 @@ Date:   Mon May 21 14:34:00 2018 -0400
 
 --- a/Makefile.am
 +++ b/Makefile.am
-@@ -29,8 +29,6 @@
- # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
- # THE POSSIBILITY OF SUCH DAMAGE.
- #;**********************************************************************;
+@@ -1,13 +1,5 @@
+ # SPDX-License-Identifier: BSD-3-Clause
+ 
+-# ax_code_coverage
+-if AUTOCONF_CODE_COVERAGE_2019_01_06
+-include $(top_srcdir)/aminclude_static.am
+-clean-local: code-coverage-clean
+-distclean-local: code-coverage-dist-clean
+-else
 -@CODE_COVERAGE_RULES@
--
- ACLOCAL_AMFLAGS = -I m4
+-endif
  
- INCLUDE_DIRS = -I$(top_srcdir)/tools -I$(top_srcdir)/lib
-@@ -53,13 +51,13 @@ LDADD = \
- bin_PROGRAMS = \
-     tools/tpm2_activatecredential \
-     tools/tpm2_certify \
--    tools/tpm2_create \
-     tools/tpm2_createpolicy \
-     tools/tpm2_createprimary \
-     tools/tpm2_dictionarylockout \
-     tools/tpm2_getcap \
-     tools/tpm2_encryptdecrypt \
-     tools/tpm2_evictcontrol \
-+    tools/tpm2_extendpcr \
-     tools/tpm2_getmanufec \
-     tools/tpm2_getpubak \
-     tools/tpm2_getpubek \
-@@ -84,11 +82,13 @@ bin_PROGRAMS = \
-     tools/tpm2_readpublic \
-     tools/tpm2_rsadecrypt \
-     tools/tpm2_rsaencrypt \
-+    tools/tpm2_sealdata \
-     tools/tpm2_send \
-     tools/tpm2_sign \
-     tools/tpm2_startup \
-     tools/tpm2_takeownership \
-     tools/tpm2_unseal \
-+    tools/tpm2_unsealdata \
-     tools/tpm2_verifysignature
+ include src_vars.mk
  
- noinst_LIBRARIES = $(LIB_COMMON)
-@@ -132,7 +132,7 @@ lib_libcommon_a_SOURCES = \
- 
- TOOL_SRC := tools/tpm2_tool.c tools/tpm2_tool.h
- 
--tools_tpm2_create_SOURCES = tools/tpm2_create.c $(TOOL_SRC)
-+tools_tpm2_createpolicy_SOURCES = tools/tpm2_createpolicy.c $(TOOL_SRC)
- tools_tpm2_createprimary_SOURCES = tools/tpm2_createprimary.c $(TOOL_SRC)
- tools_tpm2_getcap_SOURCES = tools/tpm2_getcap.c $(TOOL_SRC)
- tools_tpm2_pcrlist_SOURCES = tools/tpm2_pcrlist.c $(TOOL_SRC)
-@@ -169,10 +169,12 @@ tools_tpm2_rsaencrypt_SOURCES = tools/tp
- tools_tpm2_sign_SOURCES = tools/tpm2_sign.c $(TOOL_SRC)
- tools_tpm2_unseal_SOURCES = tools/tpm2_unseal.c $(TOOL_SRC)
- tools_tpm2_dictionarylockout_SOURCES = tools/tpm2_dictionarylockout.c $(TOOL_SRC)
--tools_tpm2_createpolicy_SOURCES = tools/tpm2_createpolicy.c $(TOOL_SRC)
- tools_tpm2_pcrextend_SOURCES = tools/tpm2_pcrextend.c $(TOOL_SRC)
- tools_tpm2_pcrevent_SOURCES = tools/tpm2_pcrevent.c $(TOOL_SRC)
- tools_tpm2_rc_decode_SOURCES = tools/tpm2_rc_decode.c $(TOOL_SRC)
-+tools_tpm2_extendpcr_SOURCES = tools/tpm2_extendpcr.c $(TOOL_SRC)
-+tools_tpm2_sealdata_SOURCES = tools/tpm2_sealdata.c $(TOOL_SRC) tools/tpm2_create.c lib/build-policy.c
-+tools_tpm2_unsealdata_SOURCES = tools/tpm2_unsealdata.c $(TOOL_SRC) lib/build-policy.c
- 
- if UNIT
- TESTS = $(check_PROGRAMS)
+@@ -114,7 +106,6 @@ tpm2_tools = \
+     tools/tpm2_clear.c \
+     tools/tpm2_clearcontrol.c \
+     tools/tpm2_clockrateadjust.c \
+-    tools/tpm2_create.c \
+     tools/tpm2_createak.c \
+     tools/tpm2_createek.c \
+     tools/tpm2_createpolicy.c \
+@@ -126,6 +117,7 @@ tpm2_tools = \
+     tools/tpm2_gettestresult.c \
+     tools/tpm2_encryptdecrypt.c \
+     tools/tpm2_evictcontrol.c \
++    tools/tpm2_extendpcr.c \
+     tools/tpm2_flushcontext.c \
+     tools/tpm2_getekcertificate.c \
+     tools/tpm2_getrandom.c \
+@@ -177,6 +169,7 @@ tpm2_tools = \
+     tools/tpm2_readpublic.c \
+     tools/tpm2_rsadecrypt.c \
+     tools/tpm2_rsaencrypt.c \
++    tools/tpm2_sealdata.c \
+     tools/tpm2_send.c \
+     tools/tpm2_selftest.c \
+     tools/tpm2_setclock.c \
+@@ -189,6 +182,7 @@ tpm2_tools = \
+     tools/tpm2_stirrandom.c \
+     tools/tpm2_testparms.c \
+     tools/tpm2_unseal.c \
++    tools/tpm2_unsealdata.c \
+     tools/tpm2_verifysignature.c \
+     tools/tpm2_setcommandauditstatus.c \
+     tools/tpm2_getcommandauditdigest.c \
 --- /dev/null
 +++ b/lib/build-policy.c
 @@ -0,0 +1,129 @@
@@ -239,16 +224,7 @@ Date:   Mon May 21 14:34:00 2018 -0400
 +
 --- a/lib/pcr.c
 +++ b/lib/pcr.c
-@@ -40,7 +40,7 @@
- #include "tpm2_util.h"
- #include "tpm2_alg_util.h"
- 
--static int pcr_get_id(const char *arg, UINT32 *pcrId)
-+int pcr_get_id(const char *arg, UINT32 *pcrId)
- {
-     UINT32 n = 0;
- 
-@@ -96,6 +96,29 @@ static bool pcr_parse_selection(const ch
+@@ -129,6 +129,30 @@ static bool pcr_parse_selection(const ch
      return true;
  }
  
@@ -275,14 +251,15 @@ Date:   Mon May 21 14:34:00 2018 -0400
 +    }
 +    return ret;
 +}
++
+ static void shrink_pcr_selection(TPML_PCR_SELECTION *s) {
  
- bool pcr_parse_selections(const char *arg, TPML_PCR_SELECTION *pcrSels) {
-     const char *strLeft = arg;
+     UINT32 i, j;
 --- a/lib/pcr.h
 +++ b/lib/pcr.h
-@@ -39,4 +39,27 @@ bool pcr_parse_selections(const char *ar
- bool pcr_parse_list(const char *str, size_t len, TPMS_PCR_SELECTION *pcrSel);
- TSS2_RC get_max_supported_pcrs(TSS2_SYS_CONTEXT *sapi_context, UINT32 *max_pcrs);
+@@ -71,4 +71,27 @@ bool pcr_check_pcr_selection(TPMS_CAPABI
+ tool_rc pcr_read_pcr_values(ESYS_CONTEXT *esys_context,
+         TPML_PCR_SELECTION *pcr_selections, tpm2_pcrs *pcrs);
  
 +int pcr_get_id(const char *arg, UINT32 *pcrId);
 +int pcr_parse_arg(char *arg, UINT32 *pcrId, BYTE *forwardHash, bool *hash_set);
@@ -308,61 +285,6 @@ Date:   Mon May 21 14:34:00 2018 -0400
 +    ((pcrSelection).pcrSelect[( (pcr)/8 )] & ( 1 << ( (pcr) % 8) ))
 +
  #endif /* SRC_PCR_H_ */
---- a/lib/tpm2_util.h
-+++ b/lib/tpm2_util.h
-@@ -108,8 +108,7 @@ struct TPM2B {
-         } while ((__result & 0x0000ffff) == TPM2_RC_RETRY); \
-         __result;                                          \
-     })
--
--int tpm2_util_hex_to_byte_structure(const char *inStr, UINT16 *byteLenth, BYTE *byteBuffer);
-+int tpm2_util_hex_to_byte_structure(const char *inStr, UINT16 *byteLength, BYTE *byteBuffer);
- 
- /**
-  * Appends a TPM2B_DIGEST buffer to a TPM2B_MAX buffer.
---- a/lib/tpm_hash.c
-+++ b/lib/tpm_hash.c
-@@ -30,6 +30,7 @@
- //**********************************************************************;
- #include <errno.h>
- #include <string.h>
-+#include <stdio.h>
- 
- #include <tss2/tss2_sys.h>
- 
-@@ -64,6 +65,7 @@ TSS2_RC tpm_hash_sequence(TSS2_SYS_CONTE
-     UINT32 rval = Tss2_Sys_HashSequenceStart(sapi_context, 0, &null_auth,
-             hash_alg, &sequence_handle, 0);
-     if (rval != TPM2_RC_SUCCESS) {
-+        printf("HashSequenceStart failed, rc=%x\n", rval);
-         return rval;
-     }
- 
-@@ -74,6 +76,7 @@ TSS2_RC tpm_hash_sequence(TSS2_SYS_CONTE
-                 &cmd_auth_array, (TPM2B_MAX_BUFFER *) &buffer_list[i], 0);
- 
-         if (rval != TPM2_RC_SUCCESS) {
-+            printf("SequenceUpdate failed, i=%d rc=%x\n", i, rval);
-             return rval;
-         }
-     }
-@@ -123,6 +126,7 @@ TSS2_RC tpm_hash_file(TSS2_SYS_CONTEXT *
-             halg, &sequenceHandle, NULL);
-     if (rval != TPM2_RC_SUCCESS) {
-         LOG_ERR("Tss2_Sys_HashSequenceStart failed: 0x%X", rval);
-+        printf("SequenceComplete failed, rc=%x\n", rval);
-         return rval;
-     }
- 
---- a/lib/tpm_hash.h
-+++ b/lib/tpm_hash.h
-@@ -103,4 +103,6 @@ TSS2_RC tpm_hash_file(TSS2_SYS_CONTEXT *
-         TPMI_RH_HIERARCHY hierarchy, FILE *input, TPM2B_DIGEST *result,
-         TPMT_TK_HASHCHECK *validation);
- 
-+UINT32 tpm_hash(TSS2_SYS_CONTEXT *sapi_context, TPMI_ALG_HASH hashAlg, UINT16 size, BYTE *data, TPM2B_DIGEST *result);
-+
- #endif /* SRC_TPM_HASH_H_ */
 --- /dev/null
 +++ b/tools/shared.h
 @@ -0,0 +1,15 @@
@@ -381,14 +303,3 @@ Date:   Mon May 21 14:34:00 2018 -0400
 +int build_policy_external(TSS2_SYS_CONTEXT *sysContext, SESSION **policySession, int trial, pcr_struct **pcrList, INT32 pcrCount, TPM2B_DIGEST *policyDigestOut, TPMI_ALG_HASH nameAlg);
 +
 +#endif /* SRC_SHARED_H */
---- a/tools/tpm2_tool.c
-+++ b/tools/tpm2_tool.c
-@@ -80,7 +80,7 @@ static TSS2_SYS_CONTEXT* sapi_ctx_init(T
- 
-     TSS2_ABI_VERSION abi_version = SUPPORTED_ABI_VERSION;
- 
--    size_t size = Tss2_Sys_GetContextSize(0);
-+    size_t size = Tss2_Sys_GetContextSize(12000);
-     TSS2_SYS_CONTEXT *sapi_ctx = (TSS2_SYS_CONTEXT*) calloc(1, size);
-     if (sapi_ctx == NULL) {
-         LOG_ERR("Failed to allocate 0x%zx bytes for the SAPI context\n",

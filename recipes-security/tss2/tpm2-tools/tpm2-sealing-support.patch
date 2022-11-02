@@ -111,13 +111,13 @@ Date:   Tue May 22 16:18:54 2018 -0400
 --- a/tools/tpm2_create.c
 +++ b/tools/tpm2_create.c
 @@ -49,6 +49,7 @@
- #include "tpm2_password_util.h"
- #include "tpm2_tool.h"
- #include "tpm2_util.h"
+ #include "tpm2_alg_util.h"
+ #include "tpm2_auth_util.h"
+ #include "tpm2_options.h"
 +#include "shared.h"
  
  typedef struct tpm_create_ctx tpm_create_ctx;
- struct tpm_create_ctx {
+ #define MAX_AUX_SESSIONS 2
 @@ -62,6 +63,7 @@ struct tpm_create_ctx {
      char *opu_path;
      char *opr_path;
@@ -328,25 +328,23 @@ Date:   Tue May 22 16:18:54 2018 -0400
      int flagCnt = 0;
  
 @@ -369,7 +270,7 @@ int tpm2_tool_onrun(TSS2_SYS_CONTEXT *sa
-         }
-     }
- 
--    if (ctx.flags.I && ctx.in_public.publicArea.type != TPM2_ALG_KEYEDHASH) {
-+    if (ctx.flags.I && ctx.type != TPM2_ALG_KEYEDHASH) {
+
+     /* Check object validitity */
+     if (ctx.object.is_sealing_input_specified &&
+-        ctx.object.in_public.publicArea.type != TPM2_ALG_KEYEDHASH) {
++        ctx.object.type != TPM2_ALG_KEYEDHASH) {
          LOG_ERR("Only TPM2_ALG_KEYEDHASH algorithm is allowed when sealing data");
          return 1;
      }
-@@ -382,8 +283,9 @@ int tpm2_tool_onrun(TSS2_SYS_CONTEXT *sa
-         if(ctx.flags.c)
-             returnVal = files_load_tpm_context_from_file(sapi_context,
-                                                          &ctx.parent_handle, ctx.context_parent_path) != true;
-+
-         if(returnVal == 0)
--            returnVal = create(sapi_context);
-+            returnVal = create_internal(sapi_context);
- 
-         if(returnVal)
-             return 1;
+@@ -382,7 +283,7 @@ int tpm2_tool_onrun(TSS2_SYS_CONTEXT *sa
+     /*
+      * 3. TPM2_CC_<command> call
+      */
+-    rc = create(ectx);
++    rc = create_internal(ectx);
+     if (rc != tool_rc_success) {
+         return rc;
+     }
 --- a/tools/tpm2_createprimary.c
 +++ b/tools/tpm2_createprimary.c
 @@ -191,6 +191,8 @@ int create_primary(TSS2_SYS_CONTEXT *sap
@@ -357,12 +355,12 @@ Date:   Tue May 22 16:18:54 2018 -0400
 +    char *index = NULL;
  
      switch(key) {
-     case 'H':
+     case 'C':
 @@ -209,7 +211,15 @@ static bool on_option(char key, char *va
-         ctx.flags.A = 1;
          break;
+     }
      case 'P':
--        res = tpm2_password_util_from_optarg(value, &ctx.session_data.hmac);
+-        ctx.parent.auth_str = value;
 +        if (fgets(pass, 40, stdin)) {
 +            index = strchr(pass, '\n');
 +            if (index)
@@ -371,17 +369,17 @@ Date:   Tue May 22 16:18:54 2018 -0400
 +            LOG_ERR("No password provided");
 +            return false;
 +        }
-+        res = tpm2_password_util_from_optarg(pass, &ctx.session_data.hmac);
-         if (!res) {
-             LOG_ERR("Invalid parent key password, got\"%s\"", value);
-             return false;
++        ctx.parent.auth_str = pass;
+         break;
+     case 'p':
+         ctx.key_auth_str = value;
 @@ -290,7 +300,7 @@ bool tpm2_tool_onstart(tpm2_options **op
-     setbuf(stdout, NULL);
-     setvbuf (stdout, NULL, _IONBF, BUFSIZ);
+         { "cphash",         required_argument, NULL,  2  },
+     };
  
--    *opts = tpm2_options_new("A:P:K:g:G:C:L:S:H:", ARRAY_LEN(topts), topts,
-+    *opts = tpm2_options_new("A:PK:g:G:C:L:S:H:", ARRAY_LEN(topts), topts,
-             on_option, NULL, TPM2_OPTIONS_SHOW_USAGE);
+-    *opts = tpm2_options_new("C:P:p:g:G:c:L:a:u:t:d:q:l:", ARRAY_LEN(topts), topts,
++    *opts = tpm2_options_new("C:Pp:g:G:c:L:a:u:t:d:q:l:", ARRAY_LEN(topts), topts,
+             on_option, NULL, 0);
  
      return *opts != NULL;
 --- /dev/null

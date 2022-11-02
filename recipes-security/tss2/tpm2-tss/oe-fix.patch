@@ -1,0 +1,24 @@
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -623,8 +623,7 @@ endef
+ 
+ define set_tss_permissions
+     (chown -R tss:tss "$1") && \
+-    (chmod -R 2775 "$1") && \
+-    (setfacl -m default:group:tss:rwx "$1")
++    (chmod -R 2775 "$1")
+ endef
+ 
+ define make_fapi_dirs
+--- a/configure.ac
++++ b/configure.ac
+@@ -477,8 +477,7 @@ AS_IF([test "$HOSTOS" = "Linux"],
+        ERROR_IF_NO_PROG([id])
+        ERROR_IF_NO_PROG([chown])
+        ERROR_IF_NO_PROG([chmod])
+-       ERROR_IF_NO_PROG([mkdir])
+-       ERROR_IF_NO_PROG([setfacl])])
++       ERROR_IF_NO_PROG([mkdir])])
+ 
+ AC_SUBST([PATH])
+ 

@@ -1,0 +1,37 @@
+--- a/bootstrap
++++ b/bootstrap
+@@ -25,24 +25,26 @@ duplicate () {
+     done
+ }
+ 
++echo "FINDME: $(pwd)"
+ 
+-VARS_FILE=src_vars.mk
++ROOTDIR="${1}"
++VARS_FILE="${ROOTDIR}/src_vars.mk"
+ AUTORECONF=${AUTORECONF:-autoreconf}
+ 
+ echo "Generating file lists: ${VARS_FILE}"
+ (
+-  src_listvar "lib" "*.c" "LIB_C"
+-  src_listvar "lib" "*.h" "LIB_H"
++  src_listvar "${ROOTDIR}/lib" "*.c" "LIB_C"
++  src_listvar "${ROOTDIR}/lib" "*.h" "LIB_H"
+   printf "LIB_SRC = \$(LIB_C) \$(LIB_H)\n"
+ 
+-  src_listvar "test/integration/tests" "*.sh" "SYSTEM_TESTS"
++  src_listvar "${ROOTDIR}/test/integration/tests" "*.sh" "SYSTEM_TESTS"
+   printf "ALL_SYSTEM_TESTS = \$(SYSTEM_TESTS)\n"
+ 
+-  duplicate "test/integration/fapi" "*.sh"
++  duplicate "${ROOTDIR}/test/integration/fapi" "*.sh"
+ 
+-  src_listvar "test/integration/fapi" "*.sh" "FAPI_TESTS"
++  src_listvar "${ROOTDIR}/test/integration/fapi" "*.sh" "FAPI_TESTS"
+   printf "ALL_FAPI_TESTS = \$(FAPI_TESTS)\n"
+ ) > ${VARS_FILE}
+ 
+-mkdir -p m4
+-${AUTORECONF} --install --sym
++#mkdir -p m4
++#${AUTORECONF} --install --sym
