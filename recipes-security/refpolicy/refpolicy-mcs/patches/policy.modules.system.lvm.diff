@@ -1,6 +1,6 @@
 --- a/policy/modules/system/lvm.te
 +++ b/policy/modules/system/lvm.te
-@@ -206,6 +206,7 @@ manage_dirs_pattern(lvm_t, lvm_runtime_t
+@@ -209,6 +209,7 @@ manage_dirs_pattern(lvm_t, lvm_runtime_t
  manage_files_pattern(lvm_t, lvm_runtime_t, lvm_runtime_t)
  manage_sock_files_pattern(lvm_t, lvm_runtime_t, lvm_runtime_t)
  files_runtime_filetrans(lvm_t, lvm_runtime_t, { file sock_file })

@@ -36,10 +36,10 @@
 +#
 +interface(`auth_setattr_pam_pid_dirs',`
 +	gen_require(`
-+		type pam_var_run_t;
++		type pam_runtime_t;
 +	')
 +
-+	allow $1 pam_var_run_t:dir setattr;
++	allow $1 pam_runtime_t:dir setattr;
 +')
 +
  ########################################

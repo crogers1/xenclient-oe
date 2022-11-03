@@ -221,7 +221,7 @@
 +')
 --- a/policy/modules/system/xen.te
 +++ b/policy/modules/system/xen.te
-@@ -82,8 +82,13 @@ type xend_runtime_t alias xend_var_run_t
+@@ -82,8 +82,13 @@ type xend_runtime_t alias xend_runtime_t
  files_runtime_file(xend_runtime_t)
  files_mountpoint(xend_runtime_t)
  
@@ -259,7 +259,7 @@
  
 @@ -116,10 +132,16 @@ init_daemon_domain(xenconsoled_t, xencon
  
- type xenconsoled_runtime_t alias xenconsoled_var_run_t;
+ type xenconsoled_runtime_t alias xenconsoled_runtime_t;
  files_runtime_file(xenconsoled_runtime_t)
 +init_daemon_pid_file(xenconsoled_runtime_t, file, "xenconsoled.pid")
  
