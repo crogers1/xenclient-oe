@@ -53,9 +53,9 @@ type audio_helper_tmp_t;
 files_tmp_file(audio_helper_tmp_t)
 files_tmp_filetrans(audio_helper_t, audio_helper_tmp_t, file)
 
-type audio_helper_var_run_t;
-files_pid_file(audio_helper_var_run_t)
-files_pid_filetrans(audio_helper_t, audio_helper_var_run_t, file)
+type audio_helper_runtime_t;
+files_runtime_file(audio_helper_runtime_t)
+files_runtime_filetrans(audio_helper_t, audio_helper_runtime_t, file)
 
 type audio_helper_tmpfs_t;
 files_tmpfs_file(audio_helper_tmpfs_t)
@@ -123,7 +123,7 @@ dbus_system_bus_client(audio_helper_t)
 
 manage_files_pattern(audio_helper_t, audio_helper_tmp_t, audio_helper_tmp_t)
 manage_files_pattern(audio_helper_t, audio_helper_tmpfs_t, audio_helper_tmpfs_t)
-manage_files_pattern(audio_helper_t, audio_helper_var_run_t, audio_helper_var_run_t)
+manage_files_pattern(audio_helper_t, audio_helper_runtime_t, audio_helper_runtime_t)
 alsa_manage_tmp_files(audio_helper_t)
 
 allow audio_helper_t audio_helper_exec_t:file exec_file_perms;

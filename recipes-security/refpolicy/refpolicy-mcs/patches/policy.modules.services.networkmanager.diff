@@ -238,7 +238,9 @@
  files_type(NetworkManager_var_lib_t)
 +files_mountpoint(NetworkManager_var_lib_t)
  
- type wpa_cli_t;
+ type NetworkManager_runtime_t;
+ files_pid_file(NetworkManager_runtime_t)
+@@ -37,6 +39,9 @@ type wpa_cli_t;
  type wpa_cli_exec_t;
  init_system_domain(wpa_cli_t, wpa_cli_exec_t)
  

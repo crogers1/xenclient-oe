@@ -27,5 +27,5 @@
 /dev/shm/metrics(/.*)?			gen_context(system_u:object_r:tapdisk_tmpfs_t,s0)
 /dev/shm/td3-[0-9]+-[0-9]+(/.*)?	gen_context(system_u:object_r:tapdisk_tmpfs_t,s0)
 /dev/shm/vbd3-[0-9]+-[0-9]+(/.*)?	gen_context(system_u:object_r:tapdisk_tmpfs_t,s0)
-/run/blktap-control(/.*)?		gen_context(system_u:object_r:tapdisk_var_run_t,s0)
-/run/tapback\..*			gen_context(system_u:object_r:tapback_var_run_t,s0)
+/run/blktap-control(/.*)?		gen_context(system_u:object_r:tapdisk_runtime_t,s0)
+/run/tapback\..*			gen_context(system_u:object_r:tapback_runtime_t,s0)

@@ -91,10 +91,10 @@ interface(`tapdisk_manage_tmpfs_files',`
 #
 interface(`tapdisk_list_control_dir',`
 	gen_require(`
-		type tapdisk_var_run_t;
+		type tapdisk_runtime_t;
 	')
 
-	allow $1 tapdisk_var_run_t:dir list_dir_perms;
+	allow $1 tapdisk_runtime_t:dir list_dir_perms;
 ')
 ########################################
 ## <summary>
@@ -108,14 +108,14 @@ interface(`tapdisk_list_control_dir',`
 #
 interface(`tapdisk_rw_control_dir',`
 	gen_require(`
-		type tapdisk_var_run_t;
+		type tapdisk_runtime_t;
 	')
 
-	allow $1 tapdisk_var_run_t:dir rw_dir_perms;
+	allow $1 tapdisk_runtime_t:dir rw_dir_perms;
 ')
 ########################################
 ## <summary>
-##	Transistion to tapdisk_var_run_t when creating the control dir.
+##	Transistion to tapdisk_runtime_t when creating the control dir.
 ##	The control dir can be created through libblktap.
 ## </summary>
 ## <param name="domain">
@@ -126,10 +126,10 @@ interface(`tapdisk_rw_control_dir',`
 #
 interface(`tapdisk_filetrans_control_dir',`
 	gen_require(`
-		type tapdisk_var_run_t;
+		type tapdisk_runtime_t;
 	')
 
-	files_pid_filetrans($1, tapdisk_var_run_t, dir, "blktap-control")
+	files_runtime_filetrans($1, tapdisk_runtime_t, dir, "blktap-control")
 ')
 ########################################
 ## <summary>
@@ -143,10 +143,10 @@ interface(`tapdisk_filetrans_control_dir',`
 #
 interface(`tapdisk_read_sock',`
 	gen_require(`
-		type tapdisk_var_run_t;
+		type tapdisk_runtime_t;
 	')
 
-	allow $1 tapdisk_var_run_t:sock_file read_sock_file_perms;
+	allow $1 tapdisk_runtime_t:sock_file read_sock_file_perms;
 ')
 ########################################
 ## <summary>
@@ -231,10 +231,10 @@ interface(`blktap_rw_blk_file',`
 #
 interface(`tapdisk_stream_connect',`
 	gen_require(`
-		type tapdisk_t, tapdisk_var_run_t;
+		type tapdisk_t, tapdisk_runtime_t;
 	')
 
-        stream_connect_pattern($1, tapdisk_var_run_t, tapdisk_var_run_t, tapdisk_t)
+        stream_connect_pattern($1, tapdisk_runtime_t, tapdisk_runtime_t, tapdisk_t)
 ')
 ########################################
 ## <summary>

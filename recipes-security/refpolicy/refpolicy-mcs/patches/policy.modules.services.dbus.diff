@@ -14,7 +14,7 @@
  ')
 +
 +/var/volatile/dbus(/.*)				gen_context(system_u:object_r:system_dbusd_var_lib_t,s0)
-+/var/volatile/run/dbus(/.*)?			gen_context(system_u:object_r:system_dbusd_var_run_t,s0)
++/var/volatile/run/dbus(/.*)?			gen_context(system_u:object_r:system_dbusd_runtime_t,s0)
 --- a/policy/modules/services/dbus.if
 +++ b/policy/modules/services/dbus.if
 @@ -144,6 +144,34 @@ interface(`dbus_system_bus_client',`
@@ -44,10 +44,10 @@
 +#
 +interface(`dbus_var_run_domtrans',`
 +	gen_require(`
-+		type system_dbusd_var_run_t;
++		type system_dbusd_runtime_t;
 +	')
 +
-+	filetrans_add_pattern($1, system_dbusd_var_run_t, $2, $3)
++	filetrans_add_pattern($1, system_dbusd_runtime_t, $2, $3)
 +')
  
  #######################################

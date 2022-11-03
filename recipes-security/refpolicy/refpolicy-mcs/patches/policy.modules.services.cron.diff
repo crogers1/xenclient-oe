@@ -48,8 +48,8 @@
 +')
 --- a/policy/modules/services/cron.te
 +++ b/policy/modules/services/cron.te
-@@ -51,7 +51,7 @@ type cron_var_lib_t;
- files_type(cron_var_lib_t)
+@@ -51,7 +51,7 @@ type cron_runtime_t;
+ files_pid_file(cron_runtime_t)
  
  type cron_log_t;
 -logging_log_file(cron_log_t)

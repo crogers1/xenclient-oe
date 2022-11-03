@@ -67,9 +67,9 @@
 +++ b/policy/modules/system/init.te
 @@ -104,6 +104,13 @@ files_lock_file(initrc_lock_t)
  
- type initrc_runtime_t alias initrc_var_run_t;
- files_runtime_file(initrc_runtime_t)
-+files_mountpoint(initrc_var_run_t)
+ type initrc_var_log_t;
+ logging_log_file(initrc_var_log_t)
++files_mountpoint(initrc_runtime_t)
 +
 +# type for flags created by init.root-ro
 +type init_flag_t;
