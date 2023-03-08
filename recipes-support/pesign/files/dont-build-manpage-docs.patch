@@ -1,0 +1,23 @@
+--- a/Make.rules
++++ b/Make.rules
+@@ -53,9 +53,6 @@ define substitute-version =
+ 		$(1) > $(2)
+ endef
+ 
+-%.1 : %.1.mdoc
+-	@mandoc -man -T man -Ios=Linux $^ > $@
+-
+ % : %.in
+ 	@$(call substitute-version,$<,$@)
+ 
+--- a/src/Makefile
++++ b/src/Makefile
+@@ -9,7 +9,7 @@ BINTARGETS=authvar client efikeygen pesi
+ 	   pesign-rpmbuild-helper pesign-authorize pesum
+ CFGTARGETS=tmpfiles.conf
+ SVCTARGETS=pesign.sysvinit pesign.service
+-MAN1TARGETS=authvar.1 efikeygen.1 pesigcheck.1 pesign-client.1 pesign.1
++MAN1TARGETS=
+ 
+ TARGETS=$(BINTARGETS) $(SVCTARGETS) $(MAN1TARGETS) $(CFGTARGETS)
+ 
