@@ -40,9 +40,9 @@
 +  return status;
 +}
 +
- 
  /**
    Loads an EFI image into memory and returns a handle to the image.
+ 
 @@ -1274,6 +1303,14 @@ CoreLoadImageCommon (
                                    );
    }
@@ -205,24 +205,23 @@
 --- a/OvmfPkg/OvmfPkgX64.dsc
 +++ b/OvmfPkg/OvmfPkgX64.dsc
 @@ -33,6 +33,7 @@
+   DEFINE SECURE_BOOT_ENABLE      = FALSE
+   DEFINE SMM_REQUIRE             = FALSE
    DEFINE SOURCE_DEBUG_ENABLE     = FALSE
-   DEFINE TPM_ENABLE              = FALSE
-   DEFINE TPM_CONFIG_ENABLE       = FALSE
 +  DEFINE XEN_VARIABLE_ENABLE     = FALSE
  
    #
    # Network definition
-@@ -200,8 +201,9 @@
+@@ -200,7 +201,9 @@
  !else
    AuthVariableLib|MdeModulePkg/Library/AuthVariableLibNull/AuthVariableLibNull.inf
  !endif
 +!if $(XEN_VARIABLE_ENABLE) == FALSE
    VarCheckLib|MdeModulePkg/Library/VarCheckLib/VarCheckLib.inf
--
 +!endif
+   VariablePolicyLib|MdeModulePkg/Library/VariablePolicyLib/VariablePolicyLib.inf
+   VariablePolicyHelperLib|MdeModulePkg/Library/VariablePolicyHelperLib/VariablePolicyHelperLib.inf
  
-   #
-   # Network libraries
 @@ -982,6 +984,9 @@
    #
    # Variable driver stack (non-SMM)

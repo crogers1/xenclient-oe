@@ -55,14 +55,6 @@
  }
 --- a/OvmfPkg/Library/PlatformBootManagerLib/BdsPlatform.h
 +++ b/OvmfPkg/Library/PlatformBootManagerLib/BdsPlatform.h
-@@ -17,7 +17,6 @@ Abstract:
- #ifndef _PLATFORM_SPECIFIC_BDS_PLATFORM_H_
- #define _PLATFORM_SPECIFIC_BDS_PLATFORM_H_
- 
--
- #include <PiDxe.h>
- 
- #include <IndustryStandard/Pci.h>
 @@ -45,6 +44,7 @@ Abstract:
  #include <Library/QemuFwCfgLib.h>
  #include <Library/QemuFwCfgS3Lib.h>

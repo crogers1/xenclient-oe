@@ -4,7 +4,6 @@ FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}:"
 # https://github.com/xcp-ng-rpms/edk2/tree/master/SOURCES
 SRC_URI += " \
     https://downloadmirror.intel.com/29334/eng/PREBOOT.EXE;unpack=0;name=PREBOOT \
-    file://xcp-ng-set-default-resolution-1024-768.patch \
     file://xcp-ng-add-xen-variable.patch \
     file://xcp-ng-add-xen-platform-device-id.patch \
     file://xcp-ng-xenorder.patch \
