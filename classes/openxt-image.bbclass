@@ -5,6 +5,7 @@ inherit image-qa-module-sigs
 # We want to inherit the FEATURE_PACKAGES but do only want core-boot included into IMAGE_INSTALL
 IMAGE_INSTALL ?= "packagegroup-core-boot"
 inherit core-image
+inherit rootfs-postcommands
 
 export STAGING_KERNEL_DIR
 
