@@ -61,3 +61,10 @@ RDEPENDS:${PN} = " \
 RDEPENDS:${PN}-part2 += " \
     busybox \
 "
+
+# this QA check will run on each package and check a pre-determined
+# list of directories that shouldn't exist or have any files in them.
+# /run is one of those directories, and since we have a file in part2
+# called "run", bitbake falsely detects it as one of these directories.
+# skip this check altogether for the part2 package.
+INSANE_SKIP:${PN}-part2 = "empty-dirs"
