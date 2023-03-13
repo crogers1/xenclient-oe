@@ -155,7 +155,7 @@ PATCHES
  tap_cli_pause_usage(FILE *stream)
  {
 -	fprintf(stream, "usage: pause <-p pid> <-m minor> [-t timeout secs]\n");
-+	fprintf(stream, "usage: pause <-m minor> [-p pid -t timeout secs]\n");
++	fprintf(stream, "usage: pause <-m minor> [-p pid] [-t timeout secs]\n");
  }
  
  static int

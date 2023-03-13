@@ -8,7 +8,6 @@ PV = "0+git${SRCPV}"
 SRCREV = "d1d4f2a9eb17b232a04ec5a4f583922860b5c78b"
 SRC_URI = "git://github.com/xapi-project/blktap.git;protocol=https;branch=master \
     file://tapback.initscript \
-    file://compiler-errors-fix.patch \
     file://fix-strncpy.patch \
     file://fix-cbt.patch \
     file://drop-rd-defs.patch \
@@ -19,11 +18,9 @@ SRC_URI = "git://github.com/xapi-project/blktap.git;protocol=https;branch=master
     file://remove-creation-of-unused-log-files.patch \
     file://add-device-string-support-to-tap-destroy.patch \
     file://fix-error-checks.patch \
-    file://add-missing-files-to-gitignore.patch \
     file://blktap3-vhd-icbinn-support.patch \
     file://Revert-CP-9798-Update-cgroups-path.patch \
     file://fix-encryption.patch \
-    file://gcc9-compilation.patch \
     file://openssl-1.1.x.patch \
     file://0001-tap-ctl-Default-to-read-only-opening.patch \
 "
@@ -38,10 +35,10 @@ INITSCRIPT_PACKAGES = "tapback"
 INITSCRIPT_NAME:tapback = "tapback"
 INITSCRIPT_PARAMS:tapback = "defaults 61 39"
 
-TARGET_CPPFLAGS += "-DTAP_CTL_NO_DEFAULT_CGROUP_SLICE -DOPEN_XT"
+TARGET_CPPFLAGS += "-fcommon -Wno-error=stringop-truncation -Wno-unused-variable -DTAP_CTL_NO_DEFAULT_CGROUP_SLICE -DOPEN_XT"
 
 do_configure:prepend() {
-	touch ${S}/EXTRAVERSION
+	echo "v3.54.2" > ${S}/VERSION
 }
 
 do_install:append() {
