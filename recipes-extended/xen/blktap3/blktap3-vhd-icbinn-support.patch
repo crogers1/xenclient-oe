@@ -502,6 +502,7 @@ PATCHES
  	char *absolute_path, *relative_path, *encoded;
  	char __parent[PATH_MAX];
  	void *block;
+ 	int (*encode_location_fn)(char*, char**, int*);
 +	ICBINN *icb = vhd_icbinn_vhd();
  	int (*encode_location_fn)(char*, char**, int*);
  
@@ -714,6 +715,13 @@ PATCHES
 -			if (!(flags & VHD_OPEN_RDONLY))
 -				oflags |= O_DSYNC;
 -		}
+-	}
+-	if (flags & VHD_OPEN_RDONLY)
+-		oflags |= O_RDONLY;
+-	if (flags & VHD_OPEN_RDWR)
+-		oflags |= O_RDWR;
+-
+-	ctx->fd = open_optional_odirect(*bypass_file ? bypass_file : ctx->file, oflags, 0644);
 +	if (icb) {
 +		oflags = 0;
 +		if (flags & VHD_OPEN_RDONLY)
