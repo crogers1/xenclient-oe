@@ -41,7 +41,7 @@ PATCHES
 ################################################################################
 --- a/drivers/scsi/sr.c
 +++ b/drivers/scsi/sr.c
-@@ -240,6 +240,15 @@ static unsigned int sr_check_events(stru
+@@ -243,6 +243,15 @@ static unsigned int sr_check_events(stru
  	if (!(clearing & DISK_EVENT_MEDIA_CHANGE))
  		return events;
  do_tur:
@@ -57,7 +57,7 @@ PATCHES
  	/* let's see whether the media is there with TUR */
  	last_present = cd->media_present;
  	ret = scsi_test_unit_ready(cd->device, SR_TIMEOUT, MAX_RETRIES, &sshdr);
-@@ -252,8 +261,19 @@ do_tur:
+@@ -255,8 +264,19 @@ do_tur:
  	cd->media_present = scsi_status_is_good(ret) ||
  		(scsi_sense_valid(&sshdr) && sshdr.asc != 0x3a);
  
@@ -97,10 +97,10 @@ PATCHES
 +
  endif
  
- source "drivers/usb/cdns3/Kconfig"
+ comment "USB dual-mode controller drivers"
 --- a/drivers/usb/Makefile
 +++ b/drivers/usb/Makefile
-@@ -66,3 +66,5 @@ obj-$(CONFIG_USBIP_CORE)	+= usbip/
+@@ -67,3 +67,5 @@ obj-$(CONFIG_USBIP_CORE)	+= usbip/
  obj-$(CONFIG_TYPEC)		+= typec/
  
  obj-$(CONFIG_USB_ROLE_SWITCH)	+= roles/
@@ -290,7 +290,7 @@ PATCHES
 +
 --- a/drivers/usb/core/hub.c
 +++ b/drivers/usb/core/hub.c
-@@ -1017,6 +1017,15 @@ int usb_remove_device(struct usb_device
+@@ -1025,6 +1025,15 @@ int usb_remove_device(struct usb_device
  	return 0;
  }
  
@@ -306,7 +306,7 @@ PATCHES
  enum hub_activation_type {
  	HUB_INIT, HUB_INIT2, HUB_INIT3,		/* INITs must come first */
  	HUB_POST_RESET, HUB_RESUME, HUB_RESET_RESUME,
-@@ -6114,7 +6123,7 @@ int usb_reset_device(struct usb_device *
+@@ -6198,7 +6207,7 @@ int usb_reset_device(struct usb_device *
  			struct usb_driver *drv;
  			int unbind = 0;
  
@@ -315,7 +315,7 @@ PATCHES
  				drv = to_usb_driver(cintf->dev.driver);
  				if (drv->pre_reset && drv->post_reset)
  					unbind = (drv->pre_reset)(cintf);
-@@ -6135,7 +6144,12 @@ int usb_reset_device(struct usb_device *
+@@ -6219,7 +6228,12 @@ int usb_reset_device(struct usb_device *
  		for (i = config->desc.bNumInterfaces - 1; i >= 0; --i) {
  			struct usb_interface *cintf = config->interface[i];
  			struct usb_driver *drv;
@@ -331,7 +331,7 @@ PATCHES
  				drv = to_usb_driver(cintf->dev.driver);
 --- a/drivers/usb/host/xhci-pci.c
 +++ b/drivers/usb/host/xhci-pci.c
-@@ -341,6 +341,11 @@ static void xhci_pci_quirks(struct devic
+@@ -539,6 +539,11 @@ static void xhci_pci_quirks(struct devic
  	if (xhci->quirks & XHCI_RESET_ON_RESUME)
  		xhci_dbg_trace(xhci, trace_xhci_dbg_quirks,
  				"QUIRK: Resetting on resume");
@@ -3550,7 +3550,7 @@ PATCHES
 +
 --- /dev/null
 +++ b/drivers/usb/xen-usbback/xenbus.c
-@@ -0,0 +1,582 @@
+@@ -0,0 +1,581 @@
 +/*  Xenbus code for usbif backend
 +    Copyright (C) 2005 Rusty Russell <rusty@rustcorp.com.au>
 +    Copyright (C) 2005 XenSource Ltd
@@ -3699,7 +3699,7 @@ PATCHES
 +	device_remove_file(&dev->dev, &dev_attr_physical_device);
 +}
 +
-+static int usbback_remove(struct xenbus_device *dev)
++static void usbback_remove(struct xenbus_device *dev)
 +{
 +	struct backend_info *be = dev_get_drvdata(&dev->dev);
 +
@@ -3744,7 +3744,6 @@ PATCHES
 +
 +	kfree(be);
 +	dev_set_drvdata(&dev->dev, NULL);
-+	return 0;
 +}
 +
 +int usbback_barrier(struct xenbus_transaction xbt,
@@ -4180,7 +4179,7 @@ PATCHES
 +extern void usb_device_reenumerate(struct usb_device *udev);
 +
 +#endif
---- a/dev/null
+--- /dev/null
 +++ b/include/xen/interface/io/usbif2.h
 @@ -0,0 +1,196 @@
 +/******************************************************************************
