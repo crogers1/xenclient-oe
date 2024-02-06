@@ -45,7 +45,7 @@ PATCHES
 ################################################################################
 --- a/drivers/block/Kconfig
 +++ b/drivers/block/Kconfig
-@@ -416,4 +416,13 @@ config BLK_DEV_UBLK
+@@ -404,4 +404,13 @@ config BLKDEV_UBLK_LEGACY_OPCODES
  
  source "drivers/block/rnbd/Kconfig"
  
@@ -627,7 +627,7 @@ PATCHES
 +MODULE_LICENSE("Dual BSD/GPL");
 --- /dev/null
 +++ b/drivers/block/blktap/device.c
-@@ -0,0 +1,682 @@
+@@ -0,0 +1,681 @@
 +#include <linux/fs.h>
 +#include <linux/blkdev.h>
 +#include <linux/blk-mq.h>
@@ -667,9 +667,8 @@ PATCHES
 +}
 +
 +static int
-+blktap_device_open(struct block_device *bdev, fmode_t mode)
++blktap_device_open(struct gendisk *disk, blk_mode_t mode)
 +{
-+	struct gendisk *disk = bdev->bd_disk;
 +	struct blktap_device *tapdev = disk->private_data;
 +
 +	if (!tapdev)
@@ -683,7 +682,7 @@ PATCHES
 +}
 +
 +static void
-+blktap_device_release(struct gendisk *disk, fmode_t mode)
++blktap_device_release(struct gendisk *disk)
 +{
 +	struct blktap_device *tapdev = disk->private_data;
 +	struct block_device *bdev = bdget_disk(disk, 0);
@@ -1752,7 +1751,7 @@ PATCHES
 +}
 --- /dev/null
 +++ b/drivers/block/blktap/ring.c
-@@ -0,0 +1,823 @@
+@@ -0,0 +1,822 @@
 +
 +#include <linux/device.h>
 +#include <linux/signal.h>
@@ -1884,7 +1883,7 @@ PATCHES
 +
 +	blktap_ring_fail_pending(tap);
 +
-+	zap_page_range(vma, vma->vm_start, PAGE_SIZE);
++	zap_page_range_single(vma, vma->vm_start, PAGE_SIZE, NULL);
 +	ClearPageReserved(page);
 +	__free_page(page);
 +
@@ -1960,7 +1959,7 @@ PATCHES
 +		for (seg = 0; seg < request->nr_pages; seg++)
 +			blktap_request_bounce(tap, request, seg, !read);
 +
-+	zap_page_range(ring->vma, uaddr, size);
++	zap_page_range_single(ring->vma, uaddr, size, NULL);
 +}
 +
 +void
@@ -2191,8 +2190,7 @@ PATCHES
 +
 +	vma->vm_private_data = tap;
 +
-+	vma->vm_flags |= VM_DONTCOPY;
-+	vma->vm_flags |= VM_DONTEXPAND | VM_DONTDUMP;
++   vm_flags_set(vma, VM_DONTCOPY | VM_DONTEXPAND | VM_DONTDUMP);
 +
 +	vma->vm_ops = &blktap_ring_vm_operations;
 +
@@ -2203,7 +2201,7 @@ PATCHES
 +
 +fail:
 +	if (page) {
-+		zap_page_range(vma, vma->vm_start, PAGE_SIZE);
++		zap_page_range_single(vma, vma->vm_start, PAGE_SIZE, NULL);
 +		ClearPageReserved(page);
 +		__free_page(page);
 +	}
@@ -2858,16 +2856,16 @@ PATCHES
 +}
 +
 +static ssize_t
-+verbosity_show(struct class *class,
-+			    struct class_attribute *attr,
++verbosity_show(const struct class *class,
++			    const struct class_attribute *attr,
 +			    char *buf)
 +{
 +	return sprintf(buf, "%d\n", blktap_debug_level);
 +}
 +
 +static ssize_t
-+verbosity_store(struct class *class,
-+			   struct class_attribute *attr,
++verbosity_store(const struct class *class,
++			   const struct class_attribute *attr,
 +			   const char *buf, size_t size)
 +{
 +	int level;
@@ -2883,8 +2881,8 @@ PATCHES
 +
 +
 +static ssize_t
-+devices_show(struct class *class,
-+			  struct class_attribute *attr,
++devices_show(const struct class *class,
++			  const struct class_attribute *attr,
 +			  char *buf)
 +{
 +	int i, ret;
@@ -2923,7 +2921,7 @@ PATCHES
 +	struct class *cls;
 +	int err = 0;
 +
-+	cls = class_create(THIS_MODULE, "blktap2");
++	cls = class_create("blktap2");
 +	if (IS_ERR(cls))
 +		err = PTR_ERR(cls);
 +	if (!err)
