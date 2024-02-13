@@ -1,5 +1,7 @@
 XEN_TARGET_ARCH = "x86_64"
 
+inherit pkgconfig
+
 SRC_URI:append = "\
     file://xenconsoled.initscript \
     file://xenstored.initscript \
@@ -26,21 +28,6 @@ FILES:${PN}-xenstored = " \
     ${INIT_D_DIR}/xenstored.${PN}-xenstored \
     ${sysconfdir}/xen/xenstored.conf \
     "
-
-FILES:${PN}-libxenhypfs = " \
-    ${libdir}/libxenhypfs.so.* \
-"
-RDPENDS_${PN} += "${PN}-libxenhypfs"
-
-FILES:${PN}-libxenhypfs-dev = " \
-    ${libdir}/libxenhypfs.so \
-    ${libdir}/pkgconfig/xenhypfs.pc \
-    ${datadir}/pkgconfig/xenhypfs.pc \
-"
-FILES:${PN}-xenhypfs = " \
-    ${sbindir}/xenhypfs \
-"
-PACKAGES += "${PN}-xenhypfs"
 
 FILES:${PN}-xen-ucode = " \
     ${sbindir}/xen-ucode \
@@ -136,4 +123,6 @@ do_install:append() {
     rm -rf ${D}/${sysconfdir}/xen/scripts/launch-xenstore
     rm -rf ${D}/${sysconfdir}/xen/scripts/block-dummy
     rm -rf ${D}/${sysconfdir}/default/xencommons
+	rm -rf ${D}/${datadir}/pkgconfig
+	rm -rf ${D}/${datadir}
 }

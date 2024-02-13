@@ -1,5 +1,5 @@
 PV = "0+git${SRCPV}"
-SRC_URI = "git://github.com/OpenXT/manager.git;protocol=https"
+SRC_URI = "git://github.com/crogers1/manager.git;protocol=https;branch=ghc8"
 SRCREV = "${AUTOREV}"
 
 # needed for ghc-provided libffi

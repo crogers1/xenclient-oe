@@ -36,3 +36,5 @@ PACKAGES += "${PN}-bc"
 FILES:${PN}-bc = " \
     ${datadir}/bash-completion/* \
 "
+
+RPROVIDES:${PN} += "${PN}-initrd"

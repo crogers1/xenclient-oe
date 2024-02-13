@@ -16,7 +16,7 @@ EXTRA_OECONF:remove = " \
     --with-system-qemu=${bindir}/qemu-system-i386 \
     --disable-qemu-traditional \
 "
-
+inherit pkgconfig
 # Force the target architecture for the hypervisor build to be 64-bit
 # irrespective of the current MACHINE settings.
 # Also supply a custom vendor suffix.

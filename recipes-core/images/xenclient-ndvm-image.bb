@@ -65,7 +65,6 @@ IMAGE_INSTALL = " \
     modemmanager \
     ppp \
     iputils-ping \
-    dbd-tools-vm \
     xen-vif-scripts-ndvm \
     grub-xen-conf \
 "

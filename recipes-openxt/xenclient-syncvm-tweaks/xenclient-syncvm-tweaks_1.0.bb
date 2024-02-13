@@ -9,7 +9,7 @@ SRC_URI = "file://argo.modutils \
 
 PACKAGES = "${PN}"
 
-RDEPENDS:${PN} += "dbd-tools"
+RDEPENDS:${PN} += ""
 
 FILES:${PN} = "/"
 

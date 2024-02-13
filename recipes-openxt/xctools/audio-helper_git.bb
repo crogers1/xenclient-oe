@@ -30,4 +30,4 @@ FILES:${PN} += " \
 FILES:${PN}-dbg += " \
     ${libdir}/xen/bin/.debug \
 "
-RDEPENDS:${PN} += "dbd-tools"
+RDEPENDS:${PN} += ""
