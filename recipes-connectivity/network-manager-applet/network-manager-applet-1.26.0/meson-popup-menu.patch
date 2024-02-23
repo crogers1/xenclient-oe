@@ -1,0 +1,12 @@
+--- a/src/meson.build
++++ b/src/meson.build
+@@ -17,7 +17,8 @@ sources = files(
+   'ethernet-dialog.c',
+   'main.c',
+   'mb-menu-item.c',
+-  'mobile-helpers.c'
++  'mobile-helpers.c',
++  'popup-menu.c'
+ )
+ 
+ resource_data = files(

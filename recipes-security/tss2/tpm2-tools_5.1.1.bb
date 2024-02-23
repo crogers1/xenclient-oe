@@ -20,9 +20,10 @@ S = "${WORKDIR}/git"
 inherit autotools pkgconfig
 
 do_configure:prepend() {
-    pushd ${S}
+    curdir=$(pwd)
+    cd ${S}
     AUTORECONF=true ./bootstrap
-    popd
+    cd $curdir
 }
 
 PACKAGES =+ "tpm2-tools-initrd"

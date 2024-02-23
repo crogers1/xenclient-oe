@@ -48,47 +48,39 @@ Jason Andryuk, jandryuk@gmail.com, 06/19/2018
 
 --- a/configure
 +++ b/configure
-@@ -357,6 +357,8 @@ docs=""
- fdt=""
- netmap="no"
- sdl=""
+@@ -382,6 +382,8 @@ default_devices="true"
+ # 3. Automatically enable/disable other options
+ tcg="enabled"
+ cfi="false"
 +sdlabi="1.2"
 +readonly_ide="no"
- sdl_image=""
- virtfs=""
- mpath=""
-@@ -1080,6 +1082,10 @@ for opt do
+ 
+ # 4. Detection partly done in configure
+ xen=${default_feature:+disabled}
+@@ -1178,6 +1180,10 @@ for opt do
    ;;
-   --enable-sdl) sdl="yes"
+   --disable-rng-none) rng_none=no
    ;;
 +  --disable-readonly-ide) readonly_ide="no"
 +  ;;
 +  --enable-readonly-ide) readonly_ide="yes"
 +  ;;
-   --disable-sdl-image) sdl_image="no"
+   --enable-keyring) secret_keyring="yes"
    ;;
-   --enable-sdl-image) sdl_image="yes"
-@@ -6365,6 +6371,7 @@ fi
- echo "SDL support       $sdl $(echo_version $sdl $sdlversion)"
- echo "SDL image support $sdl_image"
- echo "GTK support       $gtk $(echo_version $gtk $gtk_version)"
-+echo "readonly IDE support       $readonly_ide"
- echo "GTK GL support    $gtk_gl"
- echo "VTE support       $vte $(echo_version $vte $vteversion)"
- echo "TLS priority      $tls_priority"
-@@ -6714,6 +6721,9 @@ if test "$sdl" = "yes" ; then
-       echo "CONFIG_SDL_IMAGE=y" >> $config_host_mak
-   fi
+   --disable-keyring) secret_keyring="no"
+@@ -3807,6 +3813,9 @@ echo "CONFIG_QEMU_INTERP_PREFIX=$interp_
+ if test "$default_targets" = "yes"; then
+   echo "CONFIG_DEFAULT_TARGETS=y" >> $config_host_mak
  fi
 +if test "$readonly_ide" = "yes" ; then
 +  echo "CONFIG_READONLY_IDE=y" >> $config_host_mak
 +fi
- if test "$cocoa" = "yes" ; then
-   echo "CONFIG_COCOA=y" >> $config_host_mak
- fi
+ 
+ if test "$numa" = "yes"; then
+   echo "CONFIG_NUMA=y" >> $config_host_mak
 --- a/hw/ide/core.c
 +++ b/hw/ide/core.c
-@@ -1463,6 +1463,13 @@ static bool cmd_write_multiple(IDEState
+@@ -1488,6 +1488,13 @@ static bool cmd_write_multiple(IDEState
          return true;
      }
  
@@ -102,7 +94,7 @@ Jason Andryuk, jandryuk@gmail.com, 06/19/2018
      ide_cmd_lba48_transform(s, lba48);
  
      s->req_nb_sectors = s->mult_sectors;
-@@ -1507,6 +1514,13 @@ static bool cmd_write_pio(IDEState *s, u
+@@ -1532,6 +1539,13 @@ static bool cmd_write_pio(IDEState *s, u
          return true;
      }
  
@@ -116,7 +108,7 @@ Jason Andryuk, jandryuk@gmail.com, 06/19/2018
      ide_cmd_lba48_transform(s, lba48);
  
      s->req_nb_sectors = 1;
-@@ -1542,6 +1556,13 @@ static bool cmd_write_dma(IDEState *s, u
+@@ -1567,6 +1581,13 @@ static bool cmd_write_dma(IDEState *s, u
          return true;
      }
  
@@ -130,12 +122,12 @@ Jason Andryuk, jandryuk@gmail.com, 06/19/2018
      ide_cmd_lba48_transform(s, lba48);
      ide_sector_start_dma(s, IDE_DMA_WRITE);
  
-@@ -2498,10 +2519,12 @@ int ide_init_drive(IDEState *s, BlockBac
+@@ -2541,10 +2562,12 @@ int ide_init_drive(IDEState *s, BlockBac
              error_setg(errp, "Device needs media, but drive is empty");
              return -1;
          }
 +#ifndef CONFIG_READONLY_IDE
-         if (blk_is_read_only(blk)) {
+         if (!blk_is_writable(blk)) {
              error_setg(errp, "Can't use a read-only drive");
              return -1;
          }
@@ -145,7 +137,7 @@ Jason Andryuk, jandryuk@gmail.com, 06/19/2018
      if (serial) {
 --- a/hw/ide/qdev.c
 +++ b/hw/ide/qdev.c
-@@ -196,7 +196,12 @@ static void ide_dev_initfn(IDEDevice *de
+@@ -203,7 +203,12 @@ static void ide_dev_initfn(IDEDevice *de
              return;
          }
      }

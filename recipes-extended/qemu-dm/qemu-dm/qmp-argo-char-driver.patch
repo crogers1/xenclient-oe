@@ -1,10 +1,10 @@
---- a/chardev/Makefile.objs
-+++ b/chardev/Makefile.objs
-@@ -23,3 +23,4 @@ baum.o-cflags := $(SDL_CFLAGS)
- baum.o-libs := $(BRLAPI_LIBS)
- 
- common-obj-$(CONFIG_SPICE) += spice.o
-+chardev-obj-$(CONFIG_XEN) += char-argo.o
+#--- a/chardev/Makefile.objs
+#+++ b/chardev/Makefile.objs
+#@@ -23,3 +23,4 @@ baum.o-cflags := $(SDL_CFLAGS)
+# baum.o-libs := $(BRLAPI_LIBS)
+# 
+# common-obj-$(CONFIG_SPICE) += spice.o
+#+chardev-obj-$(CONFIG_XEN) += char-argo.o
 --- /dev/null
 +++ b/chardev/char-argo.c
 @@ -0,0 +1,356 @@
@@ -400,9 +400,10 @@
 --- a/qapi/char.json
 +++ b/qapi/char.json
 @@ -299,6 +299,24 @@
+             '*local': 'SocketAddressLegacy' },
    'base': 'ChardevCommon' }
- 
- ##
+
++##
 +# @ChardevArgo:
 +#
 +# Configuration info for argo socket chardevs.
@@ -420,18 +421,17 @@
 +                                  '*stream'     : 'bool' },
 +  'base': 'ChardevCommon' }
 +
-+##
+ ##
  # @ChardevMux:
  #
- # Configuration info for mux chardevs.
 @@ -415,6 +433,7 @@
-             'spiceport': { 'type': 'ChardevSpicePort',
-                            'if': 'defined(CONFIG_SPICE)' },
-             'vc': 'ChardevVC',
-+            'argo': 'ChardevArgo',
-             'ringbuf': 'ChardevRingbuf',
+             'qemu-vdagent': { 'type': 'ChardevQemuVDAgentWrapper',
+                               'if': 'CONFIG_SPICE_PROTOCOL' },
+             'vc': 'ChardevVCWrapper',
++            'argo': 'ChardevArgoWrapper',
+             'ringbuf': 'ChardevRingbufWrapper',
              # next one is just for compatibility
-             'memory': 'ChardevRingbuf' } }
+             'memory': 'ChardevRingbufWrapper' } }
 --- a/qemu-options.hx
 +++ b/qemu-options.hx
 @@ -2741,6 +2741,10 @@ DEF("chardev", HAS_ARG, QEMU_OPTION_char

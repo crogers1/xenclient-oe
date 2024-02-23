@@ -17,6 +17,7 @@ RDEPENDS:${PN} += " \
     iproute2 \
     iptables \
     networkmanager \
+    ghc-runtime \
 "
 
 require network.inc
@@ -35,21 +36,33 @@ do_configure:append() {
     # generate rpc stubs
     mkdir -p ${S}/Rpc/Autogen
 
+    echo 'made it to rpcgen'
     # Server objects
     xc-rpcgen --haskell --templates-dir=${STAGING_RPCGENDATADIR_NATIVE} --server -o ${S}/Rpc/Autogen --module-prefix=Rpc.Autogen ${STAGING_IDLDATADIR}/network_slave.xml
+    echo '-------1'
     xc-rpcgen --haskell --templates-dir=${STAGING_RPCGENDATADIR_NATIVE} --server -o ${S}/Rpc/Autogen --module-prefix=Rpc.Autogen ${STAGING_IDLDATADIR}/network.xml
+    echo '-------2'
     xc-rpcgen --haskell --templates-dir=${STAGING_RPCGENDATADIR_NATIVE} --server -o ${S}/Rpc/Autogen --module-prefix=Rpc.Autogen ${STAGING_IDLDATADIR}/network_nm.xml
+    echo '-------3'
 
     # NetworkManager objects (stored in the network-manager specific directory)
     xc-rpcgen --haskell --templates-dir=${STAGING_RPCGENDATADIR_NATIVE} --client -o ${S}/Rpc/Autogen --module-prefix=Rpc.Autogen ${STAGING_NMIDLDATADIR}/org.freedesktop.NetworkManager.xml -n NmManager
+    echo '-------4'
     xc-rpcgen --haskell --templates-dir=${STAGING_RPCGENDATADIR_NATIVE} --client -o ${S}/Rpc/Autogen --module-prefix=Rpc.Autogen ${STAGING_NMIDLDATADIR}/org.freedesktop.NetworkManager.Device.xml -n NmDevice
+    echo '-------5'
     xc-rpcgen --haskell --templates-dir=${STAGING_RPCGENDATADIR_NATIVE} --client -o ${S}/Rpc/Autogen --module-prefix=Rpc.Autogen ${STAGING_NMIDLDATADIR}/org.freedesktop.NetworkManager.Device.Wired.xml -n NmDeviceEthernet
+    echo '-------6'
     xc-rpcgen --haskell --templates-dir=${STAGING_RPCGENDATADIR_NATIVE} --client -o ${S}/Rpc/Autogen --module-prefix=Rpc.Autogen ${STAGING_NMIDLDATADIR}/org.freedesktop.NetworkManager.Device.Wireless.xml -n NmDeviceWifi
+    echo '-------7'
     xc-rpcgen --haskell --templates-dir=${STAGING_RPCGENDATADIR_NATIVE} --client -o ${S}/Rpc/Autogen --module-prefix=Rpc.Autogen ${STAGING_NMIDLDATADIR}/org.freedesktop.NetworkManager.Device.Modem.xml -n NmDeviceModem
+    echo '-------8'
     xc-rpcgen --haskell --templates-dir=${STAGING_RPCGENDATADIR_NATIVE} --client -o ${S}/Rpc/Autogen --module-prefix=Rpc.Autogen ${STAGING_NMIDLDATADIR}/org.freedesktop.NetworkManager.AccessPoint.xml -n NmAccessPoint
+    echo '-------9'
     xc-rpcgen --haskell --templates-dir=${STAGING_RPCGENDATADIR_NATIVE} --client -o ${S}/Rpc/Autogen --module-prefix=Rpc.Autogen ${STAGING_NMIDLDATADIR}/org.freedesktop.NetworkManager.Connection.Active.xml -n NmActiveConnection
+    echo '-------10'
 
     xc-rpcgen --haskell --templates-dir=${STAGING_RPCGENDATADIR_NATIVE} -o Rpc/Autogen --module-prefix=Rpc.Autogen ${STAGING_IDLDATADIR}/dbus.xml
+    echo '-------11'
 }
 
 do_install:append() {

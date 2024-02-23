@@ -34,7 +34,7 @@ inherit ${PCBIOS_CLASS}
 
 CONVERSIONTYPES:append = " disk"
 
-CONVERSION_DEPENDS_disk = "syslinux \
+CONVERSION_DEPENDS:disk = "syslinux \
                            syslinux-native \
                            dosfstools-native \
                            virtual/kernel \
@@ -121,13 +121,15 @@ validate_disk_signature() {
         bbfatal "DISK_SIGNATURE ${DISK_SIGNATURE} must be an 8 digit hex string"
 }
 
-CONVERSION_CMD:disk() {
-	validate_disk_signature
-	if [ "${PCBIOS}" = "1" ]; then
-		build_syslinux_cfg
-	fi
-	if [ "${EFI}" = "1" ]; then
-		build_efi_cfg
-	fi
-	build_boot_dd "${type}"
-}
+CONVERSION_CMD:disk = "validate_disk_signature; [ '${PCBIOS}' = '1' ] && build_syslinux_cfg; [ '${EFI}' = '1' ] && build_efi_cfg; build_boot_dd '${type}'"
+
+#CONVERSION_CMD:disk = ' \
+#	validate_disk_signature \
+#	if [ "${PCBIOS}" = "1" ]; then \
+#		build_syslinux_cfg \
+#	fi \
+#	if [ "${EFI}" = "1" ]; then \
+#		build_efi_cfg \
+#	fi \
+#	build_boot_dd "${type}" \
+#'

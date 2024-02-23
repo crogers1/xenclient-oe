@@ -12,12 +12,14 @@ SRC_URI:append = "\
 RDEPENDS:${PN}-xl += " ${PN}-scripts-block"
 RDEPENDS:${PN}-libxenlight += " varstored-watch"
 
-PACKAGES += " \
+PACKAGES:xen-tools += " \
     ${PN}-libxenhypfs \
     ${PN}-libxenhypfs-dev \
     "
 
 PROVIDES =+ "virtual/xenstored"
+
+RPROVIDES:${PN} += "xenstored"
 
 # OpenXT uses init scripts rather than systemd
 FILES:${PN}-console += "${INIT_D_DIR}/xenconsoled"
@@ -62,6 +64,10 @@ PACKAGES += "${PN}-bash-complete"
 FILES:${PN}-xl-examples += " \
     ${sysconfdir}/xen/xlexample.pvhlinux \
 "
+FILES:${PN}-xen-9pfs = " \
+    ${libdir}/xen/bin/xen-9pfsd \
+"
+PACKAGES += "${PN}-xen-9pfs"
 
 # This init script is added by OpenXT and runs the xen-init-dom0 script
 # that meta-virtualization has packaged in the ${PN}-xl package.
@@ -125,4 +131,6 @@ do_install:append() {
     rm -rf ${D}/${sysconfdir}/default/xencommons
 	rm -rf ${D}/${datadir}/pkgconfig
 	rm -rf ${D}/${datadir}
+    # We don't ship anything in var/lib
+    rm -rf ${D}/${localstatedir}
 }

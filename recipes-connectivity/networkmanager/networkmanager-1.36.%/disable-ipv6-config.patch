@@ -1,5 +1,5 @@
---- a/src/NetworkManagerUtils.c
-+++ b/src/NetworkManagerUtils.c
+--- a/src/core/NetworkManagerUtils.c
++++ b/src/core/NetworkManagerUtils.c
 @@ -287,7 +287,7 @@ nm_utils_complete_generic (NMPlatform *p
  	/* Normalize */
  	parameters = g_hash_table_new (nm_str_hash, g_str_equal);

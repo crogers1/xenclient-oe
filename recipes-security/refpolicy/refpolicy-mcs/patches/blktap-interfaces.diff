@@ -42,7 +42,7 @@
 +')
 +
 +optional_policy(`
- 	thunderbird_role(sysadm_r, sysadm_t)
+	thunderbird_role(sysadm, sysadm_t, sysadm_application_exec_domain, sysadm_r)
  ')
  
 --- a/policy/modules/system/lvm.te

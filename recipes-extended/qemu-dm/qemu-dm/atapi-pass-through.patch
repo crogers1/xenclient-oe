@@ -207,22 +207,22 @@ Ross Philipson, <philipsonr@ainfosec.com>, 10/13/2016
 +        return drv->bdrv_direct_ioctl(bs, req, buf);
 +    return -ENOTSUP;
 +}
---- a/block/Makefile.objs
-+++ b/block/Makefile.objs
-@@ -18,6 +18,7 @@ block-obj-y += block-backend.o snapshot.
- block-obj-$(CONFIG_WIN32) += file-win32.o win32-aio.o
- block-obj-$(CONFIG_POSIX) += file-posix.o
- block-obj-$(CONFIG_LINUX_AIO) += linux-aio.o
-+block-obj-$(CONFIG_ATAPI_PT) += atapi-pt-protocol.o
- block-obj-y += null.o mirror.o commit.o io.o create.o
- block-obj-y += throttle-groups.o
- block-obj-$(CONFIG_LINUX) += nvme.o
-@@ -63,3 +64,5 @@ qcow.o-libs        := -lz
- linux-aio.o-libs   := -laio
- parallels.o-cflags := $(LIBXML2_CFLAGS)
- parallels.o-libs   := $(LIBXML2_LIBS)
-+atapi-pt-protocol.o-cflags := $(LIBARGO_CFLAGS)
-+atapi-pt-protocol.o-libs := $(LIBARGO_LIBS)
+#--- a/block/Makefile.objs
+#+++ b/block/Makefile.objs
+#@@ -18,6 +18,7 @@ block-obj-y += block-backend.o snapshot.
+# block-obj-$(CONFIG_WIN32) += file-win32.o win32-aio.o
+# block-obj-$(CONFIG_POSIX) += file-posix.o
+# block-obj-$(CONFIG_LINUX_AIO) += linux-aio.o
+#+block-obj-$(CONFIG_ATAPI_PT) += atapi-pt-protocol.o
+# block-obj-y += null.o mirror.o commit.o io.o create.o
+# block-obj-y += throttle-groups.o
+# block-obj-$(CONFIG_LINUX) += nvme.o
+#@@ -63,3 +64,5 @@ qcow.o-libs        := -lz
+# linux-aio.o-libs   := -laio
+# parallels.o-cflags := $(LIBXML2_CFLAGS)
+# parallels.o-libs   := $(LIBXML2_LIBS)
+#+atapi-pt-protocol.o-cflags := $(LIBARGO_CFLAGS)
+#+atapi-pt-protocol.o-libs := $(LIBARGO_LIBS)
 --- /dev/null
 +++ b/block/atapi-pt-protocol.c
 @@ -0,0 +1,1505 @@
@@ -1800,14 +1800,14 @@ Ross Philipson, <philipsonr@ainfosec.com>, 10/13/2016
 --- a/configure
 +++ b/configure
 @@ -464,6 +464,8 @@ crypto_afalg="no"
- seccomp=""
- glusterfs=""
+ skip_meson=no
+ slirp_smbd="$default_feature"
  stubdom="no"
 +atapipt="no"
 +atapiptargo="no"
- glusterfs_xlator_opt="no"
- glusterfs_discard="no"
- glusterfs_fallocate="no"
+
+ # The following Meson options are handled manually (still they
+ # are included in the automatically generated help message)
 @@ -1402,6 +1404,14 @@ for opt do
    ;;
    --enable-glusterfs) glusterfs="yes"
@@ -1823,15 +1823,6 @@ Ross Philipson, <philipsonr@ainfosec.com>, 10/13/2016
    --disable-virtio-blk-data-plane|--enable-virtio-blk-data-plane)
        echo "$0: $opt is obsolete, virtio-blk data-plane is always on" >&2
    ;;
-@@ -6476,6 +6486,8 @@ echo "GlusterFS support $glusterfs"
- echo "gcov              $gcov_tool"
- echo "gcov enabled      $gcov"
- echo "OpenXT stubdomain support $stubdom"
-+echo "ATAPI PT support  $atapipt"
-+echo "ATAPI PT Argo support  $atapiptargo"
- echo "TPM support       $tpm"
- echo "libssh support    $libssh"
- echo "QOM debugging     $qom_cast_debug"
 @@ -7197,6 +7209,14 @@ if test "$stubdom" = "yes" ; then
    echo "CONFIG_STUBDOM=y" >> $config_host_mak
  fi
@@ -1847,16 +1838,16 @@ Ross Philipson, <philipsonr@ainfosec.com>, 10/13/2016
  if test "$tpm" = "yes"; then
    echo 'CONFIG_TPM=y' >> $config_host_mak
  fi
---- a/hw/ide/Makefile.objs
-+++ b/hw/ide/Makefile.objs
-@@ -12,3 +12,7 @@ common-obj-$(CONFIG_AHCI) += ahci.o
- common-obj-$(CONFIG_AHCI_ICH9) += ich.o
- common-obj-$(CONFIG_ALLWINNER_A10) += ahci-allwinner.o
- common-obj-$(CONFIG_IDE_SII3112) += sii3112.o
-+common-obj-$(CONFIG_ATAPI_PT) += atapi_pt.o
-+
-+atapi-pt.o-cflags := $(LIBARGO_CFLAGS)
-+atapi-pt.o-libs := $(LIBARGO_LIBS)
+#--- a/hw/ide/Makefile.objs
+#+++ b/hw/ide/Makefile.objs
+#@@ -12,3 +12,7 @@ common-obj-$(CONFIG_AHCI) += ahci.o
+# common-obj-$(CONFIG_AHCI_ICH9) += ich.o
+# common-obj-$(CONFIG_ALLWINNER_A10) += ahci-allwinner.o
+# common-obj-$(CONFIG_IDE_SII3112) += sii3112.o
+#+common-obj-$(CONFIG_ATAPI_PT) += atapi_pt.o
+#+
+#+atapi-pt.o-cflags := $(LIBARGO_CFLAGS)
+#+atapi-pt.o-libs := $(LIBARGO_LIBS)
 --- a/hw/ide/atapi.c
 +++ b/hw/ide/atapi.c
 @@ -319,7 +319,10 @@ void ide_atapi_cmd_reply_end(IDEState *s
@@ -4032,7 +4023,7 @@ Ross Philipson, <philipsonr@ainfosec.com>, 10/13/2016
  {
      DeviceState *dev;
  
--    dev = qdev_create(&bus->qbus, drive->media_cd ? "ide-cd" : "ide-hd");
+-    dev = qdev_new(drive->media_cd ? "ide-cd" : "ide-hd");
 +#ifdef CONFIG_ATAPI_PT
 +    /*
 +     * TODO this logic seems incorrect. It seems we should test whether it is
@@ -4082,9 +4073,9 @@ Ross Philipson, <philipsonr@ainfosec.com>, 10/13/2016
 +};
 +#endif /* CONFIG_ATAPI_PT */
 +
- static Property ide_drive_properties[] = {
-     DEFINE_IDE_DEV_PROPERTIES(),
-     DEFINE_PROP_END_OF_LIST(),
+ static void ide_device_class_init(ObjectClass *klass, void *data)
+ {
+     DeviceClass *k = DEVICE_CLASS(klass);
 @@ -395,6 +436,9 @@ static void ide_register_types(void)
      type_register_static(&ide_cd_info);
      type_register_static(&ide_drive_info);

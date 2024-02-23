@@ -11,14 +11,18 @@ DEPENDS = " \
     zlib \
     libcap-ng \
     pixman \
+    ninja-native \
+    meson-native \
+    bison-native \
+    glib-2.0 \
 "
 
-PV = "4.1.0"
+PV = "6.2.0"
 
 # Leave this in it's own definition so that it can be replaced with a local
 # tarball (the QEMU download speed is terrible). If this is combined with the
 # other patches, it doesn't seem to work
-SRC_URI = "http://wiki.qemu-project.org/download/qemu-${PV}.tar.bz2"
+SRC_URI = "https://download.qemu.org/qemu-${PV}.tar.bz2"
 
 # QEMU Patch Queue
 SRC_URI += "file://compile-time-stubdom-flag.patch \
@@ -39,14 +43,12 @@ SRC_URI += "file://compile-time-stubdom-flag.patch \
             file://write-acpi-state-to-xenstore.patch \
             file://set-blockdev-ro.patch \
             file://block-remove-unused-block-format-support.patch \
-            file://net-Remove-unused-network-options.patch \
             file://round-pci-region-sizes.patch \
-            file://ac97-compatibility.patch \
             file://0001-vnc-stubs-Allow-vnc-none.patch \
             "
 
-SRC_URI[md5sum] = "5862fc984bb955c4c24427d3bceddca5"
-SRC_URI[sha256sum] = "49f0de77410d4d0f7d0321ff2c2888b281381f06e1e2dac9ec4d061e3934f4ae"
+SRC_URI[md5sum] = "f276491d6821f81b1c405b7a0c3c851e"
+SRC_URI[sha256sum] = "2fde1a30a7dcc15dde0875319ecaf3dc249072dee46ba7ad1f7c8df1faece93f"
 
 S = "${WORKDIR}/qemu-${PV}"
 
@@ -73,7 +75,6 @@ PACKAGES =+ "${PN}-utils"
 EXTRA_OECONF += " \
     --target-list=i386-softmmu \
     --disable-auth-pam \
-    --disable-bluez \
     --disable-bochs \
     --disable-bzip2 \
     --disable-cap-ng \
@@ -102,7 +103,6 @@ EXTRA_OECONF += " \
     --disable-rdma \
     --disable-replication \
     --disable-sdl \
-    --disable-sheepdog \
     --disable-slirp \
     --disable-spice \
     --disable-strip \

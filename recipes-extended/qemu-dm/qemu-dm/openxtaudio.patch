@@ -53,25 +53,25 @@ None
 PATCHES
 ================================================================================
 =======
---- a/audio/Makefile.objs
-+++ b/audio/Makefile.objs
-@@ -4,10 +4,16 @@ common-obj-$(CONFIG_AUDIO_COREAUDIO) +=
- common-obj-$(CONFIG_AUDIO_DSOUND) += dsoundaudio.o
- common-obj-$(CONFIG_AUDIO_PT_INT) += audio_pt_int.o
- common-obj-$(CONFIG_AUDIO_WIN_INT) += audio_win_int.o
-+common-obj-$(CONFIG_AUDIO_OPENXT) += alsadef.o openxtargo.o
-+common-obj-$(CONFIG_AUDIO_OPENXT) += openxtdebug.o openxtaudio.o
- common-obj-y += wavcapture.o
- 
- coreaudio.o-libs := $(COREAUDIO_LIBS)
- dsoundaudio.o-libs := $(DSOUND_LIBS)
-+openxtargo.o-cflags := $(LIBARGO_CFLAGS)
-+openxtargo.o-cflags := $(LIBARGO_CFLAGS)
-+openxtaudio.o-libs := $(LIBARGO_LIBS)
-+openxtaudio.o-libs := $(LIBARGO_LIBS)
- 
- # alsa module
- common-obj-$(CONFIG_AUDIO_ALSA) += alsa.mo
+#--- a/audio/Makefile.objs
+#+++ b/audio/Makefile.objs
+#@@ -4,10 +4,16 @@ common-obj-$(CONFIG_AUDIO_COREAUDIO) +=
+# common-obj-$(CONFIG_AUDIO_DSOUND) += dsoundaudio.o
+# common-obj-$(CONFIG_AUDIO_PT_INT) += audio_pt_int.o
+# common-obj-$(CONFIG_AUDIO_WIN_INT) += audio_win_int.o
+#+common-obj-$(CONFIG_AUDIO_OPENXT) += alsadef.o openxtargo.o
+#+common-obj-$(CONFIG_AUDIO_OPENXT) += openxtdebug.o openxtaudio.o
+# common-obj-y += wavcapture.o
+# 
+# coreaudio.o-libs := $(COREAUDIO_LIBS)
+# dsoundaudio.o-libs := $(DSOUND_LIBS)
+#+openxtargo.o-cflags := $(LIBARGO_CFLAGS)
+#+openxtargo.o-cflags := $(LIBARGO_CFLAGS)
+#+openxtaudio.o-libs := $(LIBARGO_LIBS)
+#+openxtaudio.o-libs := $(LIBARGO_LIBS)
+# 
+# # alsa module
+# common-obj-$(CONFIG_AUDIO_ALSA) += alsa.mo
 --- /dev/null
 +++ b/audio/alsadef.c
 @@ -0,0 +1,151 @@
@@ -2001,16 +2001,7 @@ PATCHES
 +#endif // OPENXT_ARGO_H
 --- a/configure
 +++ b/configure
-@@ -905,7 +905,7 @@ Haiku)
- ;;
- Linux)
-   audio_drv_list="try-pa oss"
--  audio_possible_drivers="oss alsa sdl pa"
-+  audio_possible_drivers="oss alsa sdl pa openxt"
-   linux="yes"
-   linux_user="yes"
-   kvm="yes"
-@@ -1426,6 +1426,8 @@ for opt do
+@@ -1083,6 +1083,8 @@ for opt do
    ;;
    --disable-openxt-stubdom) stubdom="no"
    ;;
@@ -2019,54 +2010,77 @@ PATCHES
    --enable-xenpt-msix) xenpt_hide_msix="no"
    ;;
    --disable-xenpt-msix) xenpt_hide_msix="yes"
-@@ -3488,6 +3490,10 @@ for drv in $audio_drv_list; do
-       oss_libs="$oss_lib"
-     ;;
- 
-+    openxt)
-+        libargo="yes"
-+    ;;
-+
-     *)
-     echo "$audio_possible_drivers" | grep -q "\<$drv\>" || {
-         error_exit "Unknown driver '$drv' selected" \
 --- a/qapi/audio.json
 +++ b/qapi/audio.json
-@@ -274,7 +274,7 @@
+@@ -386,7 +386,7 @@
  # Since: 4.0
  ##
  { 'enum': 'AudiodevDriver',
--  'data': [ 'none', 'alsa', 'coreaudio', 'dsound', 'oss', 'pa', 'sdl',
-+  'data': [ 'none', 'alsa', 'coreaudio', 'dsound', 'openxt', 'oss', 'pa', 'sdl',
-             'spice', 'wav' ] }
-
+-  'data': [ 'none', 'alsa', 'coreaudio', 'dsound', 'jack', 'oss', 'pa',
++  'data': [ 'none', 'alsa', 'coreaudio', 'dsound', 'openxt', 'jack', 'oss', 'pa',
+             'sdl', 'spice', 'wav' ] }
+ 
  ##
-@@ -302,6 +302,7 @@
-     'coreaudio': 'AudiodevCoreaudioOptions',
+@@ -415,6 +415,7 @@
      'dsound':    'AudiodevDsoundOptions',
+     'jack':      'AudiodevJackOptions',
      'oss':       'AudiodevOssOptions',
 +    'openxt':    'AudiodevGenericOptions',
      'pa':        'AudiodevPaOptions',
-     'sdl':       'AudiodevGenericOptions',
+     'sdl':       'AudiodevSdlOptions',
      'spice':     'AudiodevGenericOptions',
 --- a/audio/audio.c
 +++ b/audio/audio.c
-@@ -1661,6 +1661,7 @@ void audio_create_pdos(Audiodev *dev)
+@@ -2001,6 +2001,7 @@ void audio_create_pdos(Audiodev *dev)
          CASE(ALSA, alsa, Alsa);
          CASE(COREAUDIO, coreaudio, Coreaudio);
          CASE(DSOUND, dsound, );
 +        CASE(OPENXT, openxt, );
+         CASE(JACK, jack, Jack);
          CASE(OSS, oss, Oss);
          CASE(PA, pa, Pa);
-         CASE(SDL, sdl, );
 --- a/audio/audio_template.h
 +++ b/audio/audio_template.h
-@@ -311,6 +311,8 @@ AudiodevPerDirectionOptions *glue(audio_
+@@ -329,6 +329,8 @@ AudiodevPerDirectionOptions *glue(audio_
              dev->u.coreaudio.TYPE);
      case AUDIODEV_DRIVER_DSOUND:
          return dev->u.dsound.TYPE;
 +    case AUDIODEV_DRIVER_OPENXT:
 +        return dev->u.openxt.TYPE;
+     case AUDIODEV_DRIVER_JACK:
+         return qapi_AudiodevJackPerDirectionOptions_base(dev->u.jack.TYPE);
      case AUDIODEV_DRIVER_OSS:
-         return qapi_AudiodevOssPerDirectionOptions_base(dev->u.oss.TYPE);
-     case AUDIODEV_DRIVER_PA:
+--- a/meson.build
++++ b/meson.build
+@@ -943,6 +943,12 @@ if not get_option('dsound').auto() or (t
+   endif
+ endif
+ 
++openxt = not_found
++if 'CONFIG_AUDIO_OPENXT' in config_host
++  openxt = declare_dependency(compile_args: config_host['LIBARGO_CLFAGS'].split(),
++                              link_args: config_host['LIBARGO_LIBS'].split())
++endif
++
+ coreaudio = not_found
+ if not get_option('coreaudio').auto() or (targetos == 'darwin' and have_system)
+   coreaudio = dependency('appleframeworks', modules: 'CoreAudio',
+@@ -1307,6 +1313,7 @@ if have_system
+     'alsa': alsa.found(),
+     'coreaudio': coreaudio.found(),
+     'dsound': dsound.found(),
++    'openxt': openxt.found(),
+     'jack': jack.found(),
+     'oss': oss.found(),
+     'pa': pulse.found(),
+--- a/meson_options.txt
++++ b/meson_options.txt
+@@ -13,7 +13,7 @@ option('sphinx_build', type : 'string',
+ option('default_devices', type : 'boolean', value : true,
+        description: 'Include a default selection of devices in emulators')
+ option('audio_drv_list', type: 'array', value: ['default'],
+-       choices: ['alsa', 'coreaudio', 'default', 'dsound', 'jack', 'oss', 'pa', 'sdl'],
++       choices: ['alsa', 'coreaudio', 'default', 'dsound', 'openxt', 'jack', 'oss', 'pa', 'sdl'],
+        description: 'Set audio driver list')
+ option('fuzzing_engine', type : 'string', value : '',
+        description: 'fuzzing engine library for OSS-Fuzz')

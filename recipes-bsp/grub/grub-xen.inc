@@ -15,7 +15,7 @@ SECURITY_CFLAGS = ""
 CFLAGS:append = "-fno-reorder-functions"
 
 DEPENDS:append:class-target = " grub-efi-native"
-RDEPENDS:${PN}:class-target = "grub-common virtual/grub-bootconf"
+RDEPENDS:${PN}:class-target = "grub-common virtual-grub-bootconf"
 
 SRC_URI += " \
 	file://grub-xen.cfg \
@@ -64,7 +64,7 @@ do_install:class-target() {
     ln -s "${GRUB_BINARY}" "${D}${libdir}/xen/boot/${GRUB_BINARY}.bin"
 }
 
-FILES_${PN} = "${libdir}/xen/boot"
+FILES:${PN} = "${libdir}/xen/boot"
 
 # grub.xen_pvh is a 32bit binary, so it may not match.
-INSANE_SKIP_${PN} += "arch"
+INSANE_SKIP:${PN} += "arch"

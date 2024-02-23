@@ -72,13 +72,13 @@ PATCHES
 --- a/hw/acpi/piix4.c
 +++ b/hw/acpi/piix4.c
 @@ -38,6 +38,7 @@
- #include "hw/acpi/memory_hotplug.h"
  #include "hw/acpi/acpi_dev_interface.h"
- #include "hw/xen/xen.h"
+ #include "migration/vmstate.h"
+ #include "hw/core/cpu.h"
 +#include "hw/xen/xen_acpi_pm.h"
- #include "qom/cpu.h"
  #include "trace.h"
- 
+ #include "qom/object.h"
+
 @@ -513,6 +514,11 @@ static void piix4_pm_realize(PCIDevice *
      /* APM */
      apm_init(dev, &s->apm, apm_ctrl_changed, s);
@@ -130,13 +130,13 @@ PATCHES
  static void piix4_acpi_system_hot_add_init(MemoryRegion *parent,
                                             PCIBus *bus, PIIX4PMState *s)
  {
---- a/hw/xen/Makefile.objs
-+++ b/hw/xen/Makefile.objs
-@@ -4,3 +4,4 @@ common-obj-$(CONFIG_XEN) += xen-legacy-b
- obj-$(CONFIG_XEN_PCI_PASSTHROUGH) += xen-host-pci-device.o
- obj-$(CONFIG_XEN_PCI_PASSTHROUGH) += xen_pt.o xen_pt_config_init.o xen_pt_graphics.o xen_pt_msi.o
- obj-$(CONFIG_XEN_PCI_PASSTHROUGH) += xen_pt_load_rom.o
-+obj-$(CONFIG_XEN) += xen_acpi_pm.o
+#--- a/hw/xen/Makefile.objs
+#+++ b/hw/xen/Makefile.objs
+#@@ -4,3 +4,4 @@ common-obj-$(CONFIG_XEN) += xen-legacy-b
+# obj-$(CONFIG_XEN_PCI_PASSTHROUGH) += xen-host-pci-device.o
+# obj-$(CONFIG_XEN_PCI_PASSTHROUGH) += xen_pt.o xen_pt_config_init.o xen_pt_graphics.o xen_pt_msi.o
+# obj-$(CONFIG_XEN_PCI_PASSTHROUGH) += xen_pt_load_rom.o
+#+obj-$(CONFIG_XEN) += xen_acpi_pm.o
 --- /dev/null
 +++ b/hw/xen/xen_acpi_pm.c
 @@ -0,0 +1,1126 @@
@@ -1266,16 +1266,16 @@ PATCHES
 +}
 +
 +type_init(xen_acpi_pm_register_types)
---- a/include/hw/i386/pc.h
-+++ b/include/hw/i386/pc.h
+--- a/include/hw/southbridge/piix.h
++++ b/include/hw/southbridge/piix.h
 @@ -248,6 +248,7 @@ int cmos_get_fd_drive_type(FloppyDriveTy
  I2CBus *piix4_pm_init(PCIBus *bus, int devfn, uint32_t smb_io_base,
                        qemu_irq sci_irq, qemu_irq smi_irq,
                        int smm_enabled, DeviceState **piix4_pm);
 +void piix4_pm_set_gpe_sts_raise_sci(void *opaque, uint8_t bit);
- 
- /* hpet.c */
- extern int no_hpet;
+
+ /* PIRQRC[A:D]: PIRQx Route Control Registers */
+ #define PIIX_PIRQCA 0x60
 --- /dev/null
 +++ b/include/hw/xen/xen_acpi_pm.h
 @@ -0,0 +1,43 @@
@@ -1325,27 +1325,26 @@ PATCHES
 --- a/qemu-options.hx
 +++ b/qemu-options.hx
 @@ -3699,6 +3699,9 @@ DEF("xen-domid-restrict", 0, QEMU_OPTION
-     "                        to specified domain id. (Does not affect\n"
-     "                        xenpv machine type).\n",
-     QEMU_ARCH_ALL)
+     available if KVM support is enabled when compiling.
+ ERST
+
 +DEF("xen-acpi-pm", 0, QEMU_OPTION_xen_acpi_pm,
 +    "-xen-acpi-pm     use the Xen ACPI PM emulated battery/AC/lid feature\n",
 +    QEMU_ARCH_ALL)
- STEXI
- @item -xen-domid @var{id}
- @findex -xen-domid
-@@ -3709,6 +3712,9 @@ Attach to existing xen domain.
- libxl will use this when starting QEMU (XEN only).
- @findex -xen-domid-restrict
- Restrict set of available xen operations to specified domain id (XEN only).
-+@item -xen-acpi-pm
-+@findex -xen-acpi-pm
+ DEF("xen-domid", HAS_ARG, QEMU_OPTION_xen_domid,
+     "-xen-domid id   specify xen guest domain id\n", QEMU_ARCH_ALL)
+ DEF("xen-attach", 0, QEMU_OPTION_xen_attach,
+@@ -3709,6 +3712,8 @@ Attach to existing xen domain.
+     Attach to existing xen domain. libxl will use this when starting
+     QEMU (XEN only). Restrict set of available xen operations to
+     specified domain id (XEN only).
++``-xen-acpi-pm``
 +Use the Xen ACPI PM emulated battery/AC/lid feature.
- ETEXI
- 
+ ERST
+
  DEF("no-reboot", 0, QEMU_OPTION_no_reboot, \
---- a/vl.c
-+++ b/vl.c
+--- a/softmmu/vl.c
++++ b/softmmu/vl.c
 @@ -128,6 +128,7 @@ int main(int argc, char **argv)
  #include "qapi/qapi-commands-ui.h"
  #include "qapi/qmp/qerror.h"

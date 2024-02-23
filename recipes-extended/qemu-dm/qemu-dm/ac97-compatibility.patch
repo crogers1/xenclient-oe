@@ -11,8 +11,8 @@ alias.
 Without the alias, qemu fails to start with:
 -device ac97: 'ac97' is not a valid device model name
 
---- a/qdev-monitor.c
-+++ b/qdev-monitor.c
+--- a/softmmu/qdev-monitor.c
++++ b/softmmu/qdev-monitor.c
 @@ -48,6 +48,7 @@ typedef struct QDevAlias
  
  /* Please keep this table sorted by typename. */

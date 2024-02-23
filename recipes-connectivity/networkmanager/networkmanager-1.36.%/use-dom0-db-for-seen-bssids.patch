@@ -1,66 +1,60 @@
 #OpenXT:Seen BSSIDs are populated in database for the purpose of saving them on boot.
 #       Reloading of these seen-bssids is done by network-slave on start up.
---- a/src/settings/nm-settings-connection.c
-+++ b/src/settings/nm-settings-connection.c
-@@ -19,6 +19,8 @@
-  * Copyright 2008 - 2014 Red Hat, Inc.
+--- a/src/core/settings/nm-settings-connection.c
++++ b/src/core/settings/nm-settings-connection.c
+@@ -4,6 +4,8 @@
+  * Copyright (C) 2008 - 2014 Red Hat, Inc.
   */
  
 +#include <errno.h>
 +#include <sys/wait.h>
- #include "nm-default.h"
+ #include "src/core/nm-default-daemon.h"
  
  #include "nm-settings-connection.h"
-@@ -45,6 +47,8 @@
- #define AUTOCONNECT_RETRIES_FOREVER      -1
- #define AUTOCONNECT_RESET_RETRIES_TIMER 300
+@@ -39,6 +41,8 @@
+                                | NM_SETTINGS_UPDATE2_FLAG_IN_MEMORY_DETACHED \
+                                | NM_SETTINGS_UPDATE2_FLAG_IN_MEMORY_ONLY))
  
 +static void update_seen_bssids_db ();
 +
  /*****************************************************************************/
  
  NMConnection **
-@@ -684,6 +688,8 @@ remove_entry_from_db (NMSettingsConnecti
- 		data = g_key_file_to_data (key_file, &len, &error);
- 		if (data) {
- 			g_file_set_contents (db_file, data, len, &error);
-+			if (!strcmp (db_name, "seen-bssids"))
-+				update_seen_bssids_db ();
- 			g_free (data);
- 		}
- 		if (error) {
-@@ -2491,6 +2497,26 @@ nm_settings_connection_has_seen_bssid (N
- 	return !!g_hash_table_lookup (NM_SETTINGS_CONNECTION_GET_PRIVATE (self)->seen_bssids, bssid);
+@@ -2438,6 +2442,29 @@ nm_settings_connection_has_seen_bssid(NM
+                                     bssid);
  }
  
++/* TODO: Update me to work with seen bssids since the FILE is no longer around. Also invoke me when removing seen-bssids */
 +static void
 +update_seen_bssids_db (void)
 +{
-+	char *argv[6] = { "/usr/bin/nm_sync.sh", "-n", "seen-bssids", "-w", SETTINGS_SEEN_BSSIDS_FILE, NULL };
-+	int err, stat_loc;
++/*
++    char *argv[6] = { "/usr/bin/nm_sync.sh", "-n", "seen-bssids", "-w", SETTINGS_SEEN_BSSIDS_FILE, NULL };
++    int err, stat_loc;
 +
-+	err = fork();
-+	if (err == -1) {
-+		g_warning("%s.%d: cannot fork to nm_sync.sh: %d", __FILE__, __LINE__, errno);
-+	} else if (err) {
-+		while ((waitpid(err, &stat_loc, 0) == -1) && (errno == EINTR))
-+			;
-+		err = WEXITSTATUS(stat_loc);
-+		if (err)
-+			g_warning("%s.%d: nm_sync.sh failed with code: %d", __FILE__, __LINE__, err);
-+	} else {
-+		_exit(execvp(argv[0], argv));
-+	}
++    err = fork();
++    if (err == -1) {
++        g_warning("%s.%d: cannot fork to nm_sync.sh: %d", __FILE__, __LINE__, errno);
++    } else if (err) {
++        while ((waitpid(err, &stat_loc, 0) == -1) && (errno == EINTR))
++            ;
++        err = WEXITSTATUS(stat_loc);
++        if (err)
++            g_warning("%s.%d: nm_sync.sh failed with code: %d", __FILE__, __LINE__, err);
++    } else {
++        _exit(execvp(argv[0], argv));
++    }
++*/
 +}
 +
  /**
   * nm_settings_connection_add_seen_bssid:
   * @self: the #NMSettingsConnection
-@@ -2547,6 +2573,7 @@ nm_settings_connection_add_seen_bssid (N
- 	data = g_key_file_to_data (seen_bssids_file, &len, &error);
- 	if (data) {
- 		g_file_set_contents (SETTINGS_SEEN_BSSIDS_FILE, data, len, &error);
-+		update_seen_bssids_db ();
- 		g_free (data);
- 	}
- 	g_key_file_free (seen_bssids_file);
+@@ -2501,6 +2528,7 @@ nm_settings_connection_add_seen_bssid(NM
+ 
+     i = _get_seen_bssids(self, seen_bssids_strv);
+     nm_key_file_db_set_string_list(priv->kf_db_seen_bssids, connection_uuid, seen_bssids_strv, i);
++    update_seen_bssids_db ();
+ }
+ 
+ /*****************************************************************************/

@@ -53,7 +53,6 @@ SRC_URI:append = " \
     file://shim-support-for-shim-lock-measure.patch \
     file://efi-require-shim.patch \
     file://tboot-measure-and-launch-from-xen-efi.patch \
-    file://efi-load-options-no-default-image-name.patch \
     file://argo-add-viptables.patch \
     file://argo-quiet-xsm-check-during-init.patch \
     file://libxl-seabios-ipxe.patch \

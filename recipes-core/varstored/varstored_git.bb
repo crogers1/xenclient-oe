@@ -1,6 +1,6 @@
 SUMMARY = "Package for managing guest EFI variables"
 LICENSE = "BSD-2-Clause"
-LIC_FILES_CHKSUM = "file://LICENSE;md5=8444b396c3cde7d8fe18ae36a3638a55"
+LIC_FILES_CHKSUM = "file://LICENSE;md5=4aa0fe4b47a2c3ecbddcbcf6a20f654b"
 
 inherit useradd xc-rpcgen-c pkgconfig
 
@@ -80,9 +80,15 @@ do_install() {
     install -m 0755 ${S}/varstored ${D}/usr/sbin/varstored
 
     install -d ${D}/usr/bin
-    install -m 0755 ${S}/tools/varstore-{get,set,ls,rm,sb-state} ${D}/usr/bin
+    install -m 0755 ${S}/tools/varstore-get ${D}/usr/bin
+    install -m 0755 ${S}/tools/varstore-set ${D}/usr/bin
+    install -m 0755 ${S}/tools/varstore-ls ${D}/usr/bin
+    install -m 0755 ${S}/tools/varstore-rm ${D}/usr/bin
+    install -m 0755 ${S}/tools/varstore-sb-state ${D}/usr/bin
 
     install -d ${D}/usr/share/varstored
-    install -m 0755 ${S}/{PK.auth,KEK.auth,db.auth} ${D}/usr/share/varstored
+    install -m 0755 ${S}/PK.auth ${D}/usr/share/varstored
+    install -m 0755 ${S}/KEK.auth ${D}/usr/share/varstored
+    install -m 0755 ${S}/db.auth ${D}/usr/share/varstored
     install -m 0755 ${WORKDIR}/dbx.auth ${D}/usr/share/varstored
 }

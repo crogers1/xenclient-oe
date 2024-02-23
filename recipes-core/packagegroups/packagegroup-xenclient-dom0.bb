@@ -35,7 +35,6 @@ RDEPENDS:${PN} = " \
     bridge-utils \
     iptables \
     iproute2 \
-    qemu-dm \
     seabios \
     ovmf-firmware \
     xcpmd \

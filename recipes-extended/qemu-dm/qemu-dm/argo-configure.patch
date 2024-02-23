@@ -1,17 +1,17 @@
 --- a/configure
 +++ b/configure
 @@ -502,6 +502,7 @@ docker="no"
- debug_mutex="no"
- libpmem=""
- default_devices="yes"
+ # 2. Support --with/--without option
+ default_devices="true"
+
 +libargo="no"
- 
- # cross compilers defaults, can be overridden with --cross-cc-ARCH
- cross_cc_aarch64="aarch64-linux-gnu-gcc"
+ # 3. Automatically enable/disable other options
+ tcg="enabled"
+ cfi="false"
 @@ -6036,6 +6037,16 @@ if test "$libudev" != "no" ; then
-   fi
+ if test "$meson" = git; then
+     git_submodules="${git_submodules} meson"
  fi
- 
 +##########################################
 +# argo support probe
 +if test "$libargo" = "yes"; then
@@ -22,21 +22,13 @@
 +    fi
 +fi
 +
- # Now we've finished running tests it's OK to add -Werror to the compiler flags
- if test "$werror" = "yes"; then
-     QEMU_CFLAGS="-Werror $QEMU_CFLAGS"
-@@ -6494,6 +6505,7 @@ echo "docker            $docker"
- echo "libpmem support   $libpmem"
- echo "libudev           $libudev"
- echo "default devices   $default_devices"
-+echo "libargo           $libargo"
- 
- if test "$supported_cpu" = "no"; then
-     echo
+
+ case "$meson" in
+     git | internal)
 @@ -7417,6 +7429,11 @@ if test "$libudev" != "no"; then
-     echo "LIBUDEV_LIBS=$libudev_libs" >> $config_host_mak
+   echo "CONFIG_RNG_NONE=y" >> $config_host_mak
  fi
- 
+
 +if test "$libargo" = "yes" ; then
 +  echo "LIBARGO_CFLAGS=$libargo_cflags" >> $config_host_mak
 +  echo "LIBARGO_LIBS=$libargo_libs" >> $config_host_mak

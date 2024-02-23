@@ -229,12 +229,11 @@ PATCHES
  {
 --- a/include/hw/xen/xen.h
 +++ b/include/hw/xen/xen.h
-@@ -8,8 +8,9 @@
+@@ -8,7 +8,8 @@
   *   /usr/include/xen, so it can be included unconditionally.
   */
  
 -#include "exec/cpu-common.h"
- #include "hw/irq.h"
 +#include "net/net.h"
 +#include "exec/cpu-common.h"
  

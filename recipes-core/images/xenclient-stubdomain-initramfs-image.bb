@@ -19,7 +19,6 @@ IMAGE_INSTALL = " \
     bridge-utils \
     initramfs-stubdomain \
     xen-tools-xenstore \
-    qemu-dm-stubdom \
     argo-module \
 "
 IMAGE_LINGUAS = ""

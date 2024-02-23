@@ -14,24 +14,15 @@
  
  domain_use_interactive_fds(mount_t)
  
-@@ -105,6 +112,7 @@ fs_getattr_tmpfs(mount_t)
- fs_getattr_rpc_pipefs(mount_t)
- fs_getattr_cifs(mount_t)
- fs_getattr_nfs(mount_t)
-+fs_getattr_dos_fs(mount_t)
- fs_mount_all_fs(mount_t)
- fs_unmount_all_fs(mount_t)
- fs_remount_all_fs(mount_t)
-@@ -113,12 +121,16 @@ fs_rw_tmpfs_chr_files(mount_t)
- fs_read_tmpfs_symlinks(mount_t)
- fs_dontaudit_write_tmpfs_dirs(mount_t)
- 
+@@ -113,11 +120,15 @@ fs_rw_tmpfs_chr_files(mount_t)
+ fs_read_all_image_files(mount_t)
+ fs_dontaudit_write_all_image_files(mount_t)
+
 +# root fs is labeled tmpfs_t for some reason
 +fs_search_tmpfs(mount_t)
 +
  mls_file_read_all_levels(mount_t)
  mls_file_write_all_levels(mount_t)
- 
  mls_process_write_to_clearance(mount_t)
  
  selinux_get_enforce_mode(mount_t)

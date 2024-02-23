@@ -9,7 +9,6 @@ SRC_URI += " \
     file://update-resolv-conf.patch \
     file://update-routing-tables.patch \
     file://use-dom0-db-for-seen-bssids.patch \
-    file://disable-ipv6-config.patch \
     file://fix-network-reenable.patch \
     file://NetworkManager.conf \
     file://nm_sync.sh \
@@ -32,6 +31,7 @@ do_install:append () {
     install -m 0644 ${D}${sysconfdir}/NetworkManager/NetworkManager.conf ${D}${datadir}/xenclient/nm_scripts/
 
     # Install dbus conf file for allowing nm-applet to own a bus name
+    install -m 0755 -d ${D}${sysconfdir}/dbus-1/system.d/
     install -m 0755 ${WORKDIR}/org.openxt.nmapplet.conf ${D}${sysconfdir}/dbus-1/system.d/org.openxt.nmapplet.conf
 
     # Install system-local.conf file to allow nm-applet to connect to system dbus.

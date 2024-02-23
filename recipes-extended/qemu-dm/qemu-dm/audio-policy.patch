@@ -38,16 +38,16 @@ PATCHES
 ################################################################################
 --- a/hw/audio/ac97.c
 +++ b/hw/audio/ac97.c
-@@ -25,6 +25,8 @@
- #include "qemu/module.h"
+@@ -27,6 +27,8 @@
  #include "sysemu/dma.h"
+ #include "qom/object.h"
  
 +extern int disable_audio_recording;
 +
  enum {
      AC97_Reset                     = 0x00,
      AC97_Master_Volume_Mute        = 0x02,
-@@ -1040,6 +1042,13 @@ static int read_audio (AC97LinkState *s,
+@@ -1038,6 +1040,13 @@ static int read_audio (AC97LinkState *s,
      int to_copy = 0;
      SWVoiceIn *voice = (r - s->bm_regs) == MC_INDEX ? s->voice_mc : s->voice_pi;
  
@@ -58,12 +58,12 @@ PATCHES
 +        return 0;
 +    }
 +
-     temp = audio_MIN (temp, max);
+     temp = MIN (temp, max);
  
      if (!temp) {
 --- a/hw/audio/hda-codec.c
 +++ b/hw/audio/hda-codec.c
-@@ -28,6 +28,8 @@
+@@ -30,6 +30,8 @@
  
  /* -------------------------------------------------------------------------- */
  
@@ -72,10 +72,10 @@ PATCHES
  typedef struct desc_param {
      uint32_t id;
      uint32_t val;
-@@ -238,10 +240,13 @@ static void hda_audio_input_timer(void *
+@@ -240,10 +242,13 @@ static void hda_audio_input_timer(void *
      while (to_transfer) {
          uint32_t start = (rpos & B_MASK);
-         uint32_t chunk = audio_MIN(B_SIZE - start, to_transfer);
+         uint32_t chunk = MIN(B_SIZE - start, to_transfer);
 -        int rc = hda_codec_xfer(
 -                &st->state->hda, st->stream, false, st->buf + start, chunk);
 -        if (!rc) {
@@ -90,7 +90,7 @@ PATCHES
          }
          rpos += chunk;
          to_transfer -= chunk;
-@@ -369,10 +374,13 @@ static void hda_audio_compat_input_cb(vo
+@@ -371,10 +376,13 @@ static void hda_audio_compat_input_cb(vo
                  break;
              }
          }
@@ -110,9 +110,9 @@ PATCHES
      }
 --- a/qemu-options.hx
 +++ b/qemu-options.hx
-@@ -685,6 +685,14 @@ modprobe i810_audio clocking=48000
- @end example
- ETEXI
+@@ -863,6 +863,14 @@ SRST
+         modprobe i810_audio clocking=48000
+ ERST
  
 +DEF("disable-audio-rec", 0, QEMU_OPTION_disable_audio_rec,
 +    "-disable-audio-rec Disable audio recording\n", QEMU_ARCH_ALL)
@@ -125,17 +125,9 @@ PATCHES
  DEF("device", HAS_ARG, QEMU_OPTION_device,
      "-device driver[,prop[=value][,...]]\n"
      "                add device (based on driver)\n"
---- a/vl.c
-+++ b/vl.c
-@@ -182,6 +182,7 @@ const char *prom_envs[MAX_PROM_ENVS];
- int boot_menu;
- bool boot_strict;
- uint8_t *boot_splash_filedata;
-+int disable_audio_recording = 0;
- int only_migratable; /* turn it off unless user states otherwise */
- bool wakeup_suspend_enabled;
- 
-@@ -3166,6 +3167,9 @@ int main(int argc, char **argv, char **e
+--- a/softmmu/vl.c
++++ b/softmmu/vl.c
+@@ -3016,6 +3016,9 @@ void qemu_init(int argc, char **argv, ch
              case QEMU_OPTION_soundhw:
                  select_soundhw (optarg);
                  break;
@@ -145,3 +137,13 @@ PATCHES
              case QEMU_OPTION_h:
                  help(0);
                  break;
+--- a/softmmu/globals.c
++++ b/softmmu/globals.c
+@@ -58,6 +58,7 @@ const char *prom_envs[MAX_PROM_ENVS];
+ int boot_menu;
+ bool boot_strict;
+ uint8_t *boot_splash_filedata;
++int disable_audio_recording = 0;
+ int only_migratable; /* turn it off unless user states otherwise */
+ int icount_align_option;
+ 
