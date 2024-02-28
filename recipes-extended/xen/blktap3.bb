@@ -34,7 +34,7 @@ INITSCRIPT_PACKAGES = "tapback"
 INITSCRIPT_NAME:tapback = "tapback"
 INITSCRIPT_PARAMS:tapback = "defaults 61 39"
 
-TARGET_CPPFLAGS += "-fcommon -Wno-error=stringop-truncation -DTAP_CTL_NO_DEFAULT_CGROUP_SLICE -DOPEN_XT"
+TARGET_CPPFLAGS += "-fcommon -Wno-error=stringop-truncation -Wno-unused-variable -DTAP_CTL_NO_DEFAULT_CGROUP_SLICE -DOPEN_XT"
 
 do_configure:prepend() {
 	echo "v3.54.2" > ${S}/VERSION

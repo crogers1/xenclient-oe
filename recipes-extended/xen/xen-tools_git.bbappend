@@ -13,13 +13,12 @@ require xen-tools-openxt.inc
 B = "${S}"
 
 DEFAULT_PREFERENCE = "1"
-PROVIDES = "xen-tools"
 
-PACKAGES += "vchan-socket-proxy"
-FILES:vchan-socket-proxy = " \
-    ${bindir}/vchan-socket-proxy \
-"
-RDEPENDS:${PN}-libxenlight += "vchan-socket-proxy"
+#FILES:vchan-socket-proxy = " \
+#    ${bindir}/vchan-socket-proxy \
+#"
+#PACKAGES += "vchan-socket-proxy"
+RDEPENDS:${PN}-libxenlight += "xen-tools-vchan"
 
 
 #do_deploy() {
