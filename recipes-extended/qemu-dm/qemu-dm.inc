@@ -67,7 +67,8 @@ INSANE_SKIP:${PN}-extra-roms = "arch"
 FILES:${PN}-utils = "/usr/libexec/* \
                      /usr/bin/qemu-pr-helper \
 "
-
+FILES:${PN}-icons = "/usr/share/icons/hicolor/*"
+PACKAGES += "${PN}-icons"
 PACKAGES += "${PN}-extra-keymaps ${PN}-extra-roms"
 PACKAGES =+ "${PN}-utils"
 

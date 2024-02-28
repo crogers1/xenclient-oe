@@ -4519,15 +4519,7 @@ Ross Philipson, <philipsonr@ainfosec.com>, 10/13/2016
 +#endif
 --- a/block/meson.build
 +++ b/block/meson.build
-@@ -3,6 +3,7 @@ block_ss.add(files(
-   'accounting.c',
-   'aio_task.c',
-   'amend.c',
-+  'atapi-pt-protocol.c',
-   'backup.c',
-   'copy-before-write.c',
-   'blkdebug.c',
-@@ -41,7 +42,7 @@ block_ss.add(files(
+@@ -41,10 +41,10 @@ block_ss.add(files(
    'vmdk.c',
    'vpc.c',
    'write-threshold.c',
@@ -4535,7 +4527,11 @@ Ross Philipson, <philipsonr@ainfosec.com>, 10/13/2016
 +), zstd, zlib, gnutls, argo)
  
  softmmu_ss.add(when: 'CONFIG_TCG', if_true: files('blkreplay.c'))
- 
+-
++softmmu_ss.add(files('atapi-pt-protocol.c'))
+ block_ss.add(when: 'CONFIG_QCOW1', if_true: files('qcow.c'))
+ block_ss.add(when: 'CONFIG_VDI', if_true: files('vdi.c'))
+ block_ss.add(when: 'CONFIG_CLOOP', if_true: files('cloop.c'))
 --- a/hw/ide/meson.build
 +++ b/hw/ide/meson.build
 @@ -12,3 +12,4 @@ softmmu_ss.add(when: 'CONFIG_IDE_QDEV',
