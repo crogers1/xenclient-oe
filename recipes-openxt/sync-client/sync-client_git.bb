@@ -24,7 +24,7 @@ RDEPENDS:sync-cmd += " \
     python3-dbus \
     pyicbinn \
 "
-
+DEPENDS += "python3-wheel"
 PV = "0+git${SRCPV}"
 
 SRCREV = "${AUTOREV}"

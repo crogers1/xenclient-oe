@@ -46,7 +46,7 @@ PATCHES
 ################################################################################
 --- a/hw/xen/xen-legacy-backend.c
 +++ b/hw/xen/xen-legacy-backend.c
-@@ -34,6 +34,8 @@
+@@ -33,6 +33,8 @@
  #include "hw/xen/xen_pvdev.h"
  #include "monitor/qdev.h"
  
@@ -55,7 +55,7 @@ PATCHES
  DeviceState *xen_sysdev;
  BusState *xen_sysbus;
  
-@@ -624,6 +626,171 @@ static int xenstore_scan(const char *typ
+@@ -623,6 +625,171 @@ static int xenstore_scan(const char *typ
      return 0;
  }
  
@@ -229,17 +229,15 @@ PATCHES
  {
 --- a/include/hw/xen/xen.h
 +++ b/include/hw/xen/xen.h
-@@ -8,7 +8,8 @@
+@@ -8,6 +8,7 @@
   *   /usr/include/xen, so it can be included unconditionally.
   */
  
--#include "exec/cpu-common.h"
 +#include "net/net.h"
-+#include "exec/cpu-common.h"
+ #include "exec/cpu-common.h"
  
  /* xen-machine.c */
- enum xen_mode {
-@@ -34,6 +35,9 @@ void xen_piix_pci_write_config_client(ui
+@@ -26,6 +27,9 @@ void xen_piix_pci_write_config_client(ui
  void xen_hvm_inject_msi(uint64_t addr, uint32_t data);
  int xen_is_pirq_msi(uint32_t msi_data);
  
@@ -248,20 +246,21 @@ PATCHES
 +
  qemu_irq *xen_interrupt_controller_init(void);
  
- void xenstore_store_pv_console_info(int i, struct Chardev *chr);
+ void xenstore_store_pv_console_info(int i, Chardev *chr);
 --- a/net/net.c
 +++ b/net/net.c
-@@ -53,6 +53,9 @@
+@@ -56,6 +56,10 @@
  #include "net/filter.h"
  #include "qapi/string-output-visitor.h"
  
 +/* OpenXT: xenstore_register_nic() and xenstore_unregister_nic(). */
++#include "sysemu/xen.h"
 +#include "hw/xen/xen.h"
 +
  /* Net bridge is currently not supported for W32. */
  #if !defined(_WIN32)
  # define CONFIG_NET_BRIDGE
-@@ -296,6 +299,14 @@ NICState *qemu_new_nic(NetClientInfo *in
+@@ -319,6 +323,14 @@ NICState *qemu_new_nic(NetClientInfo *in
          nic->ncs[i].queue_index = i;
      }
  
@@ -276,7 +275,7 @@ PATCHES
      return nic;
  }
  
-@@ -400,6 +411,11 @@ void qemu_del_nic(NICState *nic)
+@@ -430,6 +442,11 @@ void qemu_del_nic(NICState *nic)
  {
      int i, queues = MAX(nic->conf->peers.queues, 1);
  
@@ -287,4 +286,4 @@ PATCHES
 +
      qemu_macaddr_set_free(&nic->conf->macaddr);
  
-     /* If this is a peer NIC and peer has already been deleted, free it now. */
+     for (i = 0; i < queues; i++) {

@@ -39,7 +39,7 @@ PATCHES
 ################################################################################
 --- a/hw/acpi/core.c
 +++ b/hw/acpi/core.c
-@@ -721,15 +721,24 @@ void acpi_send_gpe_event(ACPIREGS *ar, q
+@@ -730,15 +730,24 @@ void acpi_send_gpe_event(ACPIREGS *ar, q
  
  void acpi_update_sci(ACPIREGS *regs, qemu_irq irq)
  {
@@ -71,15 +71,15 @@ PATCHES
      acpi_pm_tmr_update(regs,
 --- a/hw/acpi/piix4.c
 +++ b/hw/acpi/piix4.c
-@@ -38,6 +38,7 @@
+@@ -43,6 +43,7 @@
  #include "hw/acpi/acpi_dev_interface.h"
  #include "migration/vmstate.h"
  #include "hw/core/cpu.h"
 +#include "hw/xen/xen_acpi_pm.h"
  #include "trace.h"
  #include "qom/object.h"
-
-@@ -513,6 +514,11 @@ static void piix4_pm_realize(PCIDevice *
+ 
+@@ -491,6 +492,11 @@ static void piix4_pm_realize(PCIDevice *
      /* APM */
      apm_init(dev, &s->apm, apm_ctrl_changed, s);
  
@@ -91,7 +91,7 @@ PATCHES
      if (!s->smm_enabled) {
          /* Mark SMM as already inited to prevent SMM from running.  KVM does not
           * support SMM mode. */
-@@ -595,6 +601,7 @@ static void gpe_writeb(void *opaque, hwa
+@@ -575,6 +581,7 @@ static void gpe_writeb(void *opaque, hwa
  
      trace_piix4_gpe_writeb(addr, width, val);
      acpi_gpe_ioport_writeb(&s->ar, addr, val);
@@ -99,7 +99,7 @@ PATCHES
      acpi_update_sci(&s->ar, s->irq);
  }
  
-@@ -628,6 +635,30 @@ static void piix4_set_cpu_hotplug_legacy
+@@ -608,6 +615,30 @@ static void piix4_set_cpu_hotplug_legacy
      s->cpu_hotplug_legacy = value;
  }
  
@@ -130,16 +130,9 @@ PATCHES
  static void piix4_acpi_system_hot_add_init(MemoryRegion *parent,
                                             PCIBus *bus, PIIX4PMState *s)
  {
-#--- a/hw/xen/Makefile.objs
-#+++ b/hw/xen/Makefile.objs
-#@@ -4,3 +4,4 @@ common-obj-$(CONFIG_XEN) += xen-legacy-b
-# obj-$(CONFIG_XEN_PCI_PASSTHROUGH) += xen-host-pci-device.o
-# obj-$(CONFIG_XEN_PCI_PASSTHROUGH) += xen_pt.o xen_pt_config_init.o xen_pt_graphics.o xen_pt_msi.o
-# obj-$(CONFIG_XEN_PCI_PASSTHROUGH) += xen_pt_load_rom.o
-#+obj-$(CONFIG_XEN) += xen_acpi_pm.o
 --- /dev/null
 +++ b/hw/xen/xen_acpi_pm.c
-@@ -0,0 +1,1126 @@
+@@ -0,0 +1,1127 @@
 +/*
 + * APCI PM feature for battery/AC/lid management for OpenXT guests.
 + *
@@ -176,6 +169,7 @@ PATCHES
 +#include "pci/pci.h"
 +#include "hw/i386/pc.h"
 +#include "hw/xen/xen_acpi_pm.h"
++#include "include/hw/southbridge/piix.h"
 +
 +/* Uncomment the following line to have debug messages about
 + * Battery Management */
@@ -1231,15 +1225,15 @@ PATCHES
 +{
 +    DeviceState *dev;
 +
-+    dev = qdev_create(NULL, TYPE_XEN_ACPI_PM);
-+    qdev_prop_set_ptr(dev, "space_io", space_io);
-+    qdev_prop_set_ptr(dev, "piix4_dev", opaque);
-+    qdev_init_nofail(dev);
++    dev = qdev_new(TYPE_XEN_ACPI_PM);
++    object_property_set_link(OBJECT(dev), "space_io", OBJECT(space_io), &error_abort);
++    object_property_set_link(OBJECT(dev), "piix4_dev", OBJECT(opaque), &error_abort);
++    xen_acpi_pm_realize(dev, &error_fatal);
 +}
 +
 +static Property xen_acpi_pm_properties[] = {
-+    DEFINE_PROP_PTR("space_io", XenACPIPMState, space_io),
-+    DEFINE_PROP_PTR("piix4_dev", XenACPIPMState, piix4_dev),
++    DEFINE_PROP_LINK("space_io", XenACPIPMState, space_io, "void", void*),
++    DEFINE_PROP_LINK("piix4_dev", XenACPIPMState, piix4_dev, "void", void*),
 +    DEFINE_PROP_END_OF_LIST(),
 +};
 +
@@ -1248,7 +1242,7 @@ PATCHES
 +    DeviceClass *dc = DEVICE_CLASS(klass);
 +
 +    dc->realize = xen_acpi_pm_realize;
-+    dc->props = xen_acpi_pm_properties;
++    dc->props_ = xen_acpi_pm_properties;
 +    set_bit(DEVICE_CATEGORY_MISC, dc->categories);
 +    dc->desc = "Xen ACPI PM device";
 +}
@@ -1268,12 +1262,12 @@ PATCHES
 +type_init(xen_acpi_pm_register_types)
 --- a/include/hw/southbridge/piix.h
 +++ b/include/hw/southbridge/piix.h
-@@ -248,6 +248,7 @@ int cmos_get_fd_drive_type(FloppyDriveTy
+@@ -20,6 +20,7 @@
  I2CBus *piix4_pm_init(PCIBus *bus, int devfn, uint32_t smb_io_base,
                        qemu_irq sci_irq, qemu_irq smi_irq,
                        int smm_enabled, DeviceState **piix4_pm);
 +void piix4_pm_set_gpe_sts_raise_sci(void *opaque, uint8_t bit);
-
+ 
  /* PIRQRC[A:D]: PIRQx Route Control Registers */
  #define PIIX_PIRQCA 0x60
 --- /dev/null
@@ -1324,42 +1318,42 @@ PATCHES
 +#endif /* !XEN_ACPI_PM_H_ */
 --- a/qemu-options.hx
 +++ b/qemu-options.hx
-@@ -3699,6 +3699,9 @@ DEF("xen-domid-restrict", 0, QEMU_OPTION
+@@ -4103,6 +4103,9 @@ SRST
      available if KVM support is enabled when compiling.
  ERST
-
+ 
 +DEF("xen-acpi-pm", 0, QEMU_OPTION_xen_acpi_pm,
 +    "-xen-acpi-pm     use the Xen ACPI PM emulated battery/AC/lid feature\n",
 +    QEMU_ARCH_ALL)
  DEF("xen-domid", HAS_ARG, QEMU_OPTION_xen_domid,
      "-xen-domid id   specify xen guest domain id\n", QEMU_ARCH_ALL)
  DEF("xen-attach", 0, QEMU_OPTION_xen_attach,
-@@ -3709,6 +3712,8 @@ Attach to existing xen domain.
+@@ -4122,6 +4125,8 @@ SRST
      Attach to existing xen domain. libxl will use this when starting
      QEMU (XEN only). Restrict set of available xen operations to
      specified domain id (XEN only).
 +``-xen-acpi-pm``
 +Use the Xen ACPI PM emulated battery/AC/lid feature.
  ERST
-
+ 
  DEF("no-reboot", 0, QEMU_OPTION_no_reboot, \
 --- a/softmmu/vl.c
 +++ b/softmmu/vl.c
-@@ -128,6 +128,7 @@ int main(int argc, char **argv)
- #include "qapi/qapi-commands-ui.h"
+@@ -125,6 +125,7 @@
+ #include "qapi/qmp/qdict.h"
  #include "qapi/qmp/qerror.h"
  #include "sysemu/iothread.h"
 +#include "hw/xen/xen_acpi_pm.h"
  #include "qemu/guest-random.h"
  
- #define MAX_VIRTIO_CONSOLES 1
-@@ -3697,6 +3698,15 @@ int main(int argc, char **argv, char **e
+ #include "config-host.h"
+@@ -3532,6 +3533,15 @@ void qemu_init(int argc, char **argv, ch
                  }
                  xen_domid_restrict = true;
                  break;
 +            case QEMU_OPTION_xen_acpi_pm:
 +                /* Use the OpenXT emulated battery/AC/lid devices */
-+                if (!(xen_available())) {
++                if (!(accel_find("xen"))) {
 +                    printf("Option %s not supported for this target\n",
 +                           popt->name);
 +                    exit(1);
@@ -1367,5 +1361,15 @@ PATCHES
 +                xen_acpi_pm_set_enabled(true);
 +                break;
              case QEMU_OPTION_trace:
-                 g_free(trace_file);
-                 trace_file = trace_opt_parse(optarg);
+                 trace_opt_parse(optarg);
+                 break;
+--- a/hw/xen/meson.build
++++ b/hw/xen/meson.build
+@@ -5,6 +5,7 @@ softmmu_ss.add(when: ['CONFIG_XEN', xen]
+   'xen-legacy-backend.c',
+   'xen_devconfig.c',
+   'xen_pvdev.c',
++  'xen_acpi_pm.c',
+ ))
+ 
+ xen_specific_ss = ss.source_set()

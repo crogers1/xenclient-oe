@@ -1,17 +1,17 @@
 --- a/configure
 +++ b/configure
-@@ -502,6 +502,7 @@ docker="no"
+@@ -379,6 +379,7 @@ slirp="auto"
  # 2. Support --with/--without option
  default_devices="true"
-
+ 
 +libargo="no"
  # 3. Automatically enable/disable other options
  tcg="enabled"
  cfi="false"
-@@ -6036,6 +6037,16 @@ if test "$libudev" != "no" ; then
- if test "$meson" = git; then
-     git_submodules="${git_submodules} meson"
+@@ -1580,6 +1581,17 @@ if ! compile_prog ; then
+     error_exit "\"$cc\" cannot build an executable (is your linker broken?)"
  fi
+ 
 +##########################################
 +# argo support probe
 +if test "$libargo" = "yes"; then
@@ -22,13 +22,14 @@
 +    fi
 +fi
 +
-
- case "$meson" in
-     git | internal)
-@@ -7417,6 +7429,11 @@ if test "$libudev" != "no"; then
++
+ # Consult white-list to determine whether to enable werror
+ # by default.  Only enable by default for git builds
+ if test -z "$werror" ; then
+@@ -3769,6 +3781,11 @@ if test "$rng_none" = "yes"; then
    echo "CONFIG_RNG_NONE=y" >> $config_host_mak
  fi
-
+ 
 +if test "$libargo" = "yes" ; then
 +  echo "LIBARGO_CFLAGS=$libargo_cflags" >> $config_host_mak
 +  echo "LIBARGO_LIBS=$libargo_libs" >> $config_host_mak
@@ -37,3 +38,22 @@
  # use included Linux headers
  if test "$linux" = "yes" ; then
    mkdir -p linux-headers
+--- a/meson.build
++++ b/meson.build
+@@ -417,6 +417,8 @@ if have_system or have_tools
+ endif
+ zlib = dependency('zlib', required: true, kwargs: static_kwargs)
+ 
++argo = dependency('libargo', required: true, method: 'pkg-config', kwargs: static_kwargs)
++
+ libaio = not_found
+ if not get_option('linux_aio').auto() or have_block
+   libaio = cc.find_library('aio', has_headers: ['libaio.h'],
+@@ -577,6 +579,7 @@ if not get_option('libiscsi').auto() or
+                          required: get_option('libiscsi'),
+                          method: 'pkg-config', kwargs: static_kwargs)
+ endif
++  argo = dependency('libargo', method: 'pkg-config', kwargs: static_kwargs)
+ zstd = not_found
+ if not get_option('zstd').auto() or have_block
+   zstd = dependency('libzstd', version: '>=1.4.0',

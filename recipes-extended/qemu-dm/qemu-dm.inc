@@ -44,7 +44,6 @@ SRC_URI += "file://compile-time-stubdom-flag.patch \
             file://set-blockdev-ro.patch \
             file://block-remove-unused-block-format-support.patch \
             file://round-pci-region-sizes.patch \
-            file://0001-vnc-stubs-Allow-vnc-none.patch \
             "
 
 SRC_URI[md5sum] = "f276491d6821f81b1c405b7a0c3c851e"
@@ -84,7 +83,6 @@ EXTRA_OECONF += " \
     --disable-curses \
     --disable-dmg \
     --disable-docs \
-    --disable-fdt \
     --disable-gcrypt \
     --disable-gnutls \
     --disable-guest-agent \
@@ -128,6 +126,7 @@ EXTRA_OECONF += " \
     --enable-trace-backends=nop \
     --enable-werror \
     --enable-xen \
+    --enable-openxt-audio \
     --extra-cflags="${CFLAGS}" \
 "
 
@@ -140,15 +139,15 @@ EXTRA_OEMAKE += "AUTOCONF_HOST='--host=`arch`' DESTDIR=${D} STRIP=''"
 INC_PR = "r17"
 
 do_configure:append() {
-	sed -i -s '/^CONFIG_L2TPV3=y/d' config-host.mak
+	sed -i -s '/^CONFIG_L2TPV3=y/d' ${S}/build/config-host.mak
 }
 
 do_compile:prepend() {
-	rm -f i386-softmmu/config-devices.mak
-	oe_runmake i386-softmmu/config-devices.mak
+	#rm -f i386-softmmu/config-devices.mak
+	#oe_runmake i386-softmmu/config-devices.mak
 
 	dev_disable() {
-		sed -i -e 's/\('$1'=\).*$/\1n/' i386-softmmu/config-devices.mak
+		sed -i -e 's/\('$1'=\).*$/\1n/' build/i386-softmmu-config-devices.mak
 	}
 
 	dev_disable CONFIG_VGA_ISA

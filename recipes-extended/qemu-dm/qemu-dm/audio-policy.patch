@@ -110,17 +110,12 @@ PATCHES
      }
 --- a/qemu-options.hx
 +++ b/qemu-options.hx
-@@ -863,6 +863,14 @@ SRST
+@@ -863,6 +863,9 @@ SRST
          modprobe i810_audio clocking=48000
  ERST
  
 +DEF("disable-audio-rec", 0, QEMU_OPTION_disable_audio_rec,
 +    "-disable-audio-rec Disable audio recording\n", QEMU_ARCH_ALL)
-+STEXI
-+@item -disable-audio-rec
-+@findex -disable-audio-rec
-+Disable audio recording in the guest.
-+ETEXI
 +
  DEF("device", HAS_ARG, QEMU_OPTION_device,
      "-device driver[,prop[=value][,...]]\n"
@@ -147,3 +142,14 @@ PATCHES
  int only_migratable; /* turn it off unless user states otherwise */
  int icount_align_option;
  
+--- a/include/sysemu/sysemu.h
++++ b/include/sysemu/sysemu.h
+@@ -34,6 +34,8 @@ typedef enum {
+ 
+ extern int vga_interface_type;
+ 
++extern int disable_audio_recording;
++
+ extern int graphic_width;
+ extern int graphic_height;
+ extern int graphic_depth;
