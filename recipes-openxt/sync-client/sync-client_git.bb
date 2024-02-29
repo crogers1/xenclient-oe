@@ -28,7 +28,7 @@ DEPENDS += "python3-wheel"
 PV = "0+git${SRCPV}"
 
 SRCREV = "${AUTOREV}"
-SRC_URI = "git://github.com/OpenXT/sync-client.git;protocol=https;branch=master \
+SRC_URI = "git://github.com/crogers1/sync-client.git;protocol=https;branch=kirkstone \
            file://sync-client-daemon.initscript"
 
 INITSCRIPT_NAME = "sync-client-daemon"

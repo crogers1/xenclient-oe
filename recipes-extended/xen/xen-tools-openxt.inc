@@ -123,12 +123,10 @@ do_install:append() {
     # xenstore stubdomain init program (libdir == /usr/lib)
     rm -f ${D}/${libdir}/xen/bin/init-xenstore-domain
 
-    rm -rf ${D}/${INIT_D_DIR}/xencommons
     rm -rf ${D}/${INIT_D_DIR}/xendriverdomain
     rm -rf ${D}/${sysconfdir}/xen/scripts/colo-proxy-setup
     rm -rf ${D}/${sysconfdir}/xen/scripts/launch-xenstore
     rm -rf ${D}/${sysconfdir}/xen/scripts/block-dummy
-    rm -rf ${D}/${sysconfdir}/default/xencommons
 	rm -rf ${D}/${datadir}/pkgconfig
 	rm -rf ${D}/${datadir}
     # We don't ship anything in var/lib

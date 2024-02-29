@@ -65,6 +65,8 @@ post_rootfs_shell_commands() {
     ln -s /var/run/hosts ${IMAGE_ROOTFS}/etc/hosts
     ln -s /var/volatile/etc/resolv.conf ${IMAGE_ROOTFS}/etc/resolv.conf
 
+    ln -sfr ${IMAGE_ROOTFS}/usr/lib/ghc-8.10.7/rts/libffi.so ${IMAGE_ROOTFS}/usr/lib/libffi.so.7
+
     echo 'kernel.printk_ratelimit = 0' >> ${IMAGE_ROOTFS}/etc/sysctl.conf
 
     # Create mountpoint for /mnt/secure

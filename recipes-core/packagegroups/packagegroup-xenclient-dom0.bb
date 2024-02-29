@@ -79,6 +79,7 @@ RDEPENDS:${PN} = " \
     usb-modeswitch \
     upgrade-db \
     rpc-proxy \
+    dbd \
     xenclient-language-sync \
     atapi-pt-helper \
     audio-helper \
@@ -97,6 +98,7 @@ RDEPENDS:${PN} = " \
     vusb-daemon \
     xenmgr-data \
     updatemgr \
+    uid \
     xenmgr \
     xen-tools-xenstore \
     tpm2-tss \

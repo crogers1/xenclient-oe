@@ -21,7 +21,6 @@ export IMAGE_BASENAME = "xenclient-ndvm-image"
 
 COMPATIBLE_MACHINE = "(xenclient-ndvm)"
 
-
 BAD_RECOMMENDATIONS += " \
     avahi-daemon \
     avahi-autoipd \

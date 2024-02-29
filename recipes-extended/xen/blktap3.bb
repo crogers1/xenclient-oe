@@ -13,6 +13,7 @@ SRC_URI = "git://github.com/xapi-project/blktap.git;protocol=https;branch=master
     file://drop-rd-defs.patch \
     file://fix-format-specifier-errors.patch \
     file://OXT-specific-errors-fix.patch \
+    file://fix-run-time-errors-and-memory-leaks.patch \
     file://fix-segfault-if-startup-fails.patch \
     file://remove-creation-of-unused-log-files.patch \
     file://add-device-string-support-to-tap-destroy.patch \

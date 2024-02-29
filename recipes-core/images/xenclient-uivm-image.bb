@@ -64,6 +64,7 @@ IMAGE_INSTALL += "\
     xprop \
     xrandr \
     surf \
+    gdb \
     network-manager-applet \
     network-manager-applet-locale-de \
     network-manager-applet-locale-es \

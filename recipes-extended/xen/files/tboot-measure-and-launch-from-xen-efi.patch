@@ -75,9 +75,9 @@ Signed-off-by: Tamas K Lengyel <lengyelt@ainfosec.com>
 +{
 +}
 +
- static void __init efi_arch_handle_cmdline(CHAR16 *cmdline_options,
+ static void __init efi_arch_handle_cmdline(CHAR16 *image_name,
+                                            CHAR16 *cmdline_options,
                                             const char *cfgfile_options)
- {
 --- a/xen/arch/x86/efi/efi-boot.h
 +++ b/xen/arch/x86/efi/efi-boot.h
 @@ -9,16 +9,43 @@

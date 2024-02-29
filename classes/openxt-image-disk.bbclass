@@ -34,7 +34,7 @@ inherit ${PCBIOS_CLASS}
 
 CONVERSIONTYPES:append = " disk"
 
-CONVERSION_DEPENDS:disk = "syslinux \
+CONVERSION_DEPENDS_disk = "syslinux \
                            syslinux-native \
                            dosfstools-native \
                            virtual/kernel \
