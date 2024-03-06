@@ -79,7 +79,54 @@ PATCHES
  #include "trace.h"
  #include "qom/object.h"
  
-@@ -491,6 +492,11 @@ static void piix4_pm_realize(PCIDevice *
+@@ -56,46 +57,6 @@ struct pci_status {
+     uint32_t down;
+ };
+ 
+-struct PIIX4PMState {
+-    /*< private >*/
+-    PCIDevice parent_obj;
+-    /*< public >*/
+-
+-    MemoryRegion io;
+-    uint32_t io_base;
+-
+-    MemoryRegion io_gpe;
+-    ACPIREGS ar;
+-
+-    APMState apm;
+-
+-    PMSMBus smb;
+-    uint32_t smb_io_base;
+-
+-    qemu_irq irq;
+-    qemu_irq smi_irq;
+-    int smm_enabled;
+-    bool smm_compat;
+-    Notifier machine_ready;
+-    Notifier powerdown_notifier;
+-
+-    AcpiPciHpState acpi_pci_hotplug;
+-    bool use_acpi_hotplug_bridge;
+-    bool use_acpi_root_pci_hotplug;
+-
+-    uint8_t disable_s3;
+-    uint8_t disable_s4;
+-    uint8_t s4_val;
+-
+-    bool cpu_hotplug_legacy;
+-    AcpiCpuHotplug gpe_cpu;
+-    CPUHotplugState cpuhp_state;
+-
+-    MemHotplugState acpi_memory_hotplug;
+-};
+-
+-OBJECT_DECLARE_SIMPLE_TYPE(PIIX4PMState, PIIX4_PM)
+-
+ static void piix4_acpi_system_hot_add_init(MemoryRegion *parent,
+                                            PCIBus *bus, PIIX4PMState *s);
+ 
+@@ -491,6 +452,11 @@ static void piix4_pm_realize(PCIDevice *
      /* APM */
      apm_init(dev, &s->apm, apm_ctrl_changed, s);
  
@@ -91,7 +138,7 @@ PATCHES
      if (!s->smm_enabled) {
          /* Mark SMM as already inited to prevent SMM from running.  KVM does not
           * support SMM mode. */
-@@ -575,6 +581,7 @@ static void gpe_writeb(void *opaque, hwa
+@@ -575,6 +541,7 @@ static void gpe_writeb(void *opaque, hwa
  
      trace_piix4_gpe_writeb(addr, width, val);
      acpi_gpe_ioport_writeb(&s->ar, addr, val);
@@ -99,7 +146,7 @@ PATCHES
      acpi_update_sci(&s->ar, s->irq);
  }
  
-@@ -608,6 +615,30 @@ static void piix4_set_cpu_hotplug_legacy
+@@ -608,6 +575,30 @@ static void piix4_set_cpu_hotplug_legacy
      s->cpu_hotplug_legacy = value;
  }
  
@@ -168,8 +215,8 @@ PATCHES
 +#include "hw/xen/xen.h"
 +#include "pci/pci.h"
 +#include "hw/i386/pc.h"
-+#include "hw/xen/xen_acpi_pm.h"
 +#include "include/hw/southbridge/piix.h"
++#include "hw/xen/xen_acpi_pm.h"
 +
 +/* Uncomment the following line to have debug messages about
 + * Battery Management */
@@ -267,8 +314,8 @@ PATCHES
 +typedef struct XenACPIPMState {
 +    SysBusDevice busdev;
 +
-+    void *space_io;                  /* MemoryRegion */
-+    void *piix4_dev;
++    MemoryRegion *space_io;                  /* MemoryRegion */
++    PIIX4PMState *piix4_dev;
 +
 +    struct xen_battery_manager xbm;
 +
@@ -1221,7 +1268,7 @@ PATCHES
 +    error_setg(errp, "Unable to initialize the Xen ACPI PM feature\n");
 +}
 +
-+void xen_acpi_pm_create(MemoryRegion *space_io, void *opaque)
++void xen_acpi_pm_create(MemoryRegion *space_io, PIIX4PMState *opaque)
 +{
 +    DeviceState *dev;
 +
@@ -1232,8 +1279,8 @@ PATCHES
 +}
 +
 +static Property xen_acpi_pm_properties[] = {
-+    DEFINE_PROP_LINK("space_io", XenACPIPMState, space_io, "void", void*),
-+    DEFINE_PROP_LINK("piix4_dev", XenACPIPMState, piix4_dev, "void", void*),
++    DEFINE_PROP_LINK("space_io", XenACPIPMState, space_io, TYPE_MEMORY_REGION, MemoryRegion*),
++    DEFINE_PROP_LINK("piix4_dev", XenACPIPMState, piix4_dev, TYPE_PIIX4_PM, PIIX4PMState*),
 +    DEFINE_PROP_END_OF_LIST(),
 +};
 +
@@ -1242,7 +1289,7 @@ PATCHES
 +    DeviceClass *dc = DEVICE_CLASS(klass);
 +
 +    dc->realize = xen_acpi_pm_realize;
-+    dc->props_ = xen_acpi_pm_properties;
++	device_class_set_props(dc, xen_acpi_pm_properties);
 +    set_bit(DEVICE_CATEGORY_MISC, dc->categories);
 +    dc->desc = "Xen ACPI PM device";
 +}
@@ -1262,7 +1309,19 @@ PATCHES
 +type_init(xen_acpi_pm_register_types)
 --- a/include/hw/southbridge/piix.h
 +++ b/include/hw/southbridge/piix.h
-@@ -20,6 +20,7 @@
+@@ -14,12 +14,19 @@
+ 
+ #include "hw/pci/pci.h"
+ #include "qom/object.h"
++#include "hw/acpi/acpi.h"
++#include "hw/acpi/cpu_hotplug.h"
++#include "hw/acpi/memory_hotplug.h"
++#include "hw/acpi/pcihp.h"
++#include "hw/i2c/pm_smbus.h"
++#include "hw/isa/apm.h"
+ 
+ #define TYPE_PIIX4_PM "PIIX4_PM"
+ 
  I2CBus *piix4_pm_init(PCIBus *bus, int devfn, uint32_t smb_io_base,
                        qemu_irq sci_irq, qemu_irq smi_irq,
                        int smm_enabled, DeviceState **piix4_pm);
@@ -1270,6 +1329,53 @@ PATCHES
  
  /* PIRQRC[A:D]: PIRQx Route Control Registers */
  #define PIIX_PIRQCA 0x60
+@@ -36,6 +43,46 @@ I2CBus *piix4_pm_init(PCIBus *bus, int d
+ #define PIIX_NUM_PIC_IRQS       16      /* i8259 * 2 */
+ #define PIIX_NUM_PIRQS          4ULL    /* PIRQ[A-D] */
+ 
++struct PIIX4PMState {
++    /*< private >*/
++    PCIDevice parent_obj;
++    /*< public >*/
++
++    MemoryRegion io;
++    uint32_t io_base;
++
++    MemoryRegion io_gpe;
++    ACPIREGS ar;
++
++    APMState apm;
++
++    PMSMBus smb;
++    uint32_t smb_io_base;
++
++    qemu_irq irq;
++    qemu_irq smi_irq;
++    int smm_enabled;
++    bool smm_compat;
++    Notifier machine_ready;
++    Notifier powerdown_notifier;
++
++    AcpiPciHpState acpi_pci_hotplug;
++    bool use_acpi_hotplug_bridge;
++    bool use_acpi_root_pci_hotplug;
++
++    uint8_t disable_s3;
++    uint8_t disable_s4;
++    uint8_t s4_val;
++
++    bool cpu_hotplug_legacy;
++    AcpiCpuHotplug gpe_cpu;
++    CPUHotplugState cpuhp_state;
++
++    MemHotplugState acpi_memory_hotplug;
++};
++
++OBJECT_DECLARE_SIMPLE_TYPE(PIIX4PMState, PIIX4_PM)
++
+ struct PIIXState {
+     PCIDevice dev;
+ 
 --- /dev/null
 +++ b/include/hw/xen/xen_acpi_pm.h
 @@ -0,0 +1,43 @@
@@ -1298,12 +1404,12 @@ PATCHES
 +#define XEN_ACPI_PM_H_
 +
 +#define TYPE_XEN_ACPI_PM "xen-acpi-pm"
-+
++#include "hw/southbridge/piix.h"
 +/*
 + * This function is use for the initialization of the battery/AC/lid devices.
 + * These device are linked to the ACPI devices in the ssdt_pm.asl module.
 + */
-+void xen_acpi_pm_create(MemoryRegion *space_io, void *opaque);
++void xen_acpi_pm_create(MemoryRegion *space_io, PIIX4PMState *opaque);
 +
 +/* Set to enable the Xen ACPI PM device support */
 +void xen_acpi_pm_set_enabled(bool enable);
@@ -1373,3 +1479,42 @@ PATCHES
  ))
  
  xen_specific_ss = ss.source_set()
+--- a/hw/core/qdev-properties-system.c
++++ b/hw/core/qdev-properties-system.c
+@@ -1119,3 +1119,26 @@ const PropertyInfo qdev_prop_uuid = {
+     .set   = set_uuid,
+     .set_default_value = set_default_uuid_auto,
+ };
++
++/*static void set_memory_region(Object *obj, Visitor *v, const char *name, void *opaque,
++                    Error **errp)
++{
++    Property *prop = opaque;
++	MemoryRegion **mr = object_field_prop_ptr(obj, prop);
++
++	MemoryRegion 
++    if (!visit_type_MemoryRegion(v, name, ) {
++
++}
++static void set_default_memory_region_auto(ObjectProperty *op, const Property *prop)
++{
++	object_property_set_default_uint(op, 0);
++}
++
++const PropertyInfo qdev_prop_mr = {
++	.name  = "MemoryRegion",
++	.description = "Memory Region pointer",
++	.get   = get_memory_region,
++	.set   = set_memory_region,
++	.set_default_value = set_default_memory_region_auto,
++*/
+--- a/include/hw/qdev-properties-system.h
++++ b/include/hw/qdev-properties-system.h
+@@ -22,6 +22,7 @@ extern const PropertyInfo qdev_prop_audi
+ extern const PropertyInfo qdev_prop_off_auto_pcibar;
+ extern const PropertyInfo qdev_prop_pcie_link_speed;
+ extern const PropertyInfo qdev_prop_pcie_link_width;
++extern const PropertyInfo qdev_prop_mr;
+ 
+ #define DEFINE_PROP_PCI_DEVFN(_n, _s, _f, _d)                   \
+     DEFINE_PROP_SIGNED(_n, _s, _f, _d, qdev_prop_pci_devfn, int32_t)

@@ -445,7 +445,7 @@ PATCHES
 +
 +    // Setup QEMU
 +    audio_pcm_init_info(&hw->info, &settings);
-+    hw->mix_buf->size = 1024;
++    hw->samples = 1024;
 +
 +    // Success
 +    return 0;
@@ -672,7 +672,7 @@ PATCHES
 +
 +    // Setup QEMU
 +    audio_pcm_init_info(&hw->info, &settings);
-+    hw->conv_buf->size = 1024;
++    hw->samples = 1024;
 +
 +    // Success
 +    return 0;
