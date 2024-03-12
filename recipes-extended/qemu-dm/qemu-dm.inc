@@ -45,6 +45,7 @@ SRC_URI += "file://compile-time-stubdom-flag.patch \
             file://block-remove-unused-block-format-support.patch \
             file://round-pci-region-sizes.patch \
             file://openxt-apply-config-changes.patch \
+            file://config-disable.mak \
             "
 
 SRC_URI[md5sum] = "f276491d6821f81b1c405b7a0c3c851e"
