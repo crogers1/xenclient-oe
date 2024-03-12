@@ -19,6 +19,7 @@ RDEPENDS:${PN}:class-target = "grub-common virtual-grub-bootconf"
 
 SRC_URI += " \
 	file://grub-xen.cfg \
+    file://workaround-vma-overlap.patch \
 "
 
 S = "${WORKDIR}/grub-${PV}"
