@@ -9,6 +9,12 @@ SRC_URI:append = "\
     file://xl.conf \
 "
 
+# needed for hvmloader, drop meta-virt's append and prefer our version
+EXTRA_OEMAKE:remove = "STDVGA_ROM=${STAGING_DIR_HOST}/usr/share/firmware/vgabios-0.8a.bin"
+EXTRA_OEMAKE:remove = "CIRRUSVGA_ROM=${STAGING_DIR_HOST}/usr/share/firmware/vgabios-0.8a.cirrus.bin"
+EXTRA_OEMAKE += "STDVGA_ROM=${STAGING_DIR_HOST}/usr/share/firmware/vgabios-0.8c.bin"
+EXTRA_OEMAKE += "CIRRUSVGA_ROM=${STAGING_DIR_HOST}/usr/share/firmware/vgabios-0.8c.cirrus.bin"
+
 RDEPENDS:${PN}-xl += " ${PN}-scripts-block"
 RDEPENDS:${PN}-libxenlight += " varstored-watch"
 

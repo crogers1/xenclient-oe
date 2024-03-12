@@ -48,11 +48,11 @@ PATCHES
            }
          in_format = 0;
 @@ -4094,7 +4094,7 @@ void printf(s)
-       //  }
+         in_format = 0;
        }
-     else {
+     } else {
 -      outb(0x0500, c);
 +      outb(0xe9, c);
-       }
-     s ++;
      }
+     s++;
+   }

@@ -22,6 +22,7 @@ Date:   Mon May 7 13:39:27 2012 +0100
 CHANGELOG 
 ################################################################################
 Ported to VGABIOS: Eric Chanudet, chanudete@ainfosec.com, 01/03/2015
+Ported to VGABIOS v0.8c: Chris Rogers, rogersc@ainfosec.com, 03/12/2024
 
 ################################################################################
 REMOVAL 
@@ -44,16 +45,11 @@ PATCHES
 ################################################################################
 --- a/vbe.c
 +++ b/vbe.c
-@@ -957,9 +957,9 @@ Bit16u *AX;Bit16u CX; Bit16u ES;Bit16u D
-                     (size_64k > totalMemory))
-                   info.ModeAttributes &= ~VBE_MODE_ATTRIBUTE_SUPPORTED;
- 
--                if (using_lfb) {
--                  info.NumberOfBanks = 1;
--                }
-+                /* Windows 8 require this to be 1! */
-+                info.NumberOfBanks = 1;
-+
- #ifdef PCI_VID
-                 lfb_addr = pci_get_lfb_addr(PCI_VID);
- #else
+@@ -1341,7 +1341,6 @@ vbe_biosfn_return_mode_information:
+   push cx
+   mov  ax, cx
+   and  ax, #VBE_MODE_LINEAR_FRAME_BUFFER
+-  jz   mode_no_lfb_1
+   mov  ax, #0x0001
+ mode_no_lfb_1:
+   push ax
