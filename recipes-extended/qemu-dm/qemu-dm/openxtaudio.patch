@@ -266,7 +266,7 @@ PATCHES
 +#endif // ALSADEF_H
 --- /dev/null
 +++ b/audio/openxtaudio.c
-@@ -0,0 +1,650 @@
+@@ -0,0 +1,698 @@
 +//
 +// Copyright (c) 2015 Assured Information Security, Inc
 +//
@@ -343,6 +343,7 @@ PATCHES
 +OpenXTPlaybackInitAckPacket *playback_init_ack_packet = NULL;
 +OpenXTPlaybackSetVolumePacket *playback_set_volume_packet = NULL;
 +OpenXTPlaybackGetAvailableAckPacket *playback_get_available_ack_packet = NULL;
++OpenXTWritePacket *write_packet = NULL;
 +
 +// Global Argo Packet Capture Bodies
 +OpenXTCapturePacket *capture_packet = NULL;
@@ -411,6 +412,7 @@ PATCHES
 +    int ret;
 +    struct audsettings settings;
 +
++    OPENXT_DEBUG("Hello playback!\n");
 +    // Sanity checks
 +    openxt_checkp(hw, -EINVAL);
 +    openxt_checkp(as, -EINVAL);
@@ -446,7 +448,11 @@ PATCHES
 +    // Setup QEMU
 +    audio_pcm_init_info(&hw->info, &settings);
 +    hw->samples = 1024;
++    hw->size_emul = hw->samples * hw->info.bytes_per_frame;
++    hw->buf_emul = g_malloc(hw->size_emul);
++    hw->pos_emul = hw->pending_emul = 0;
 +
++    OPENXT_DEBUG("Finished playback init\n");
 +    // Success
 +    return 0;
 +}
@@ -481,22 +487,21 @@ PATCHES
 +    int samples;
 +
 +    // Sanity checks
-+    if(!hw)
-+        return;
++    assert(hw);
 +    
-+    if(openxt_argo_isconnected(conn) != true)
-+        return;
++    assert(openxt_argo_isconnected(conn) == true);
 +
 +    // We need to find out how much space is available in ALSA so that we
 +    // know how many samples to read.
-+    openxt_send_blank_packet(OPENXT_PLAYBACK_GET_AVAILABLE);
-+    openxt_argo_recv(conn, &rcv_packet);
++    assert(openxt_send_blank_packet(OPENXT_PLAYBACK_GET_AVAILABLE) == 0);
++    assert(openxt_argo_recv(conn, &rcv_packet) == (sizeof(OpenXTPlaybackGetAvailableAckPacket)));
 +
 +    // The following figures out how many samples we "can" process in this
 +    // iteration (as this function is called by a timer in QEMU). Basically,
 +    // that total number of samples we can process is the lower value of either
 +    // the total number of samples provided to the hardware (live), and the
 +    // total number of samples that ALSA can currently take.
++    
 +    decr = playback_get_available_ack_packet->available;
 +
 +    // Now that we know how many samples we can send to ALSA to process, we
@@ -516,8 +521,8 @@ PATCHES
 +        len = MIN(len, MAX_PCM_BUFFER_SIZE / sizeof(uint32_t));
 +
 +        // Setup the packet.
-+        openxt_argo_set_opcode(&snd_packet, OPENXT_PLAYBACK);
-+        openxt_argo_set_length(&snd_packet, PLAYBACK_PACKET_LENGTH(len));
++        assert(openxt_argo_set_opcode(&snd_packet, OPENXT_PLAYBACK) == 0);
++        assert(openxt_argo_set_length(&snd_packet, PLAYBACK_PACKET_LENGTH(len)) == 0);
 +
 +        // Fill in the packet's body. Note that the hw->clip function is
 +        // basically a memcpy, the only difference is that len is in samples
@@ -530,8 +535,9 @@ PATCHES
 +        playback_packet->num_samples = len;
 +        hw->clip(playback_packet->samples, hw->mix_buf->samples + hw->mix_buf->pos, len);
 +
++
 +        // Send the packet to the helper.
-+        openxt_argo_send(conn, &snd_packet);
++        assert(openxt_argo_send(conn, &snd_packet) == PLAYBACK_PACKET_LENGTH(len));
 +
 +        // We need to advance the internal pointers.
 +        samples -= len;
@@ -580,37 +586,49 @@ PATCHES
 +///
 +static void openxt_playback_enable(HWVoiceOut *hw, bool enable)
 +{
++    OPENXT_DEBUG("Enter playback enable\n");
 +    // Sanity checks
 +    if(openxt_argo_isconnected(conn) != true)
 +        return;
 +
 +    if (enable) {
++        OPENXT_DEBUG("Playback enable argo connected - enable\n");
 +        openxt_send_blank_packet(OPENXT_PLAYBACK_ENABLE_VOICE);
 +    } else {
++        OPENXT_DEBUG("Playback enable argo connected - disable\n");
 +        openxt_send_blank_packet(OPENXT_PLAYBACK_DISABLE_VOICE);
 +    }
++    OPENXT_DEBUG("Finished Playback enable\n");
 +}
 +
 +static void openxt_playback_volume(HWVoiceOut *hw, Volume *vol)
 +{
 +    // Setup the packet
++    int ret;    
++    OPENXT_DEBUG("Playback volume enter\n");
 +    openxt_argo_set_opcode(&snd_packet, OPENXT_PLAYBACK_SET_VOLUME);
 +    openxt_argo_set_length(&snd_packet, sizeof(OpenXTPlaybackSetVolumePacket));
 +
 +    // Setup the packet.
 +    if (vol->mute) {
 +
++        OPENXT_DEBUG("playback volume mute");
 +        playback_set_volume_packet->vol = 0;
 +        playback_set_volume_packet->enabled = 0;
 +
 +    } else {
 +
-+        playback_set_volume_packet->vol = (vol->vol[0] * 100) / UINT_MAX;
++        OPENXT_DEBUG("pb volume set Volume vol: %d\n", (vol->vol[0]));
++        OPENXT_DEBUG("pb volume set: %d\n", (vol->vol[0] * 100) / 256);
++        playback_set_volume_packet->vol = (vol->vol[0] * 100) / 256;
 +        playback_set_volume_packet->enabled = 1;
 +    }
 +
++    OPENXT_DEBUG("Playback volume send packet\n");
 +    // Send the packet
-+    openxt_argo_send(conn, &snd_packet);
++    ret = openxt_argo_send(conn, &snd_packet);
++    assert(ret == sizeof(OpenXTPlaybackSetVolumePacket));
++    OPENXT_DEBUG("Playback volume exit\n");
 +}
 +
 +/////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -638,6 +656,7 @@ PATCHES
 +    int ret;
 +    struct audsettings settings;
 +
++    OPENXT_DEBUG("Hello caputure!\n");
 +    // Sanity checks
 +    openxt_checkp(hw, -EINVAL);
 +    openxt_checkp(as, -EINVAL);
@@ -673,7 +692,11 @@ PATCHES
 +    // Setup QEMU
 +    audio_pcm_init_info(&hw->info, &settings);
 +    hw->samples = 1024;
++    hw->size_emul = hw->samples * hw->info.bytes_per_frame;
++    hw->buf_emul = g_malloc(hw->size_emul);
++    hw->pos_emul = hw->pending_emul = 0;
 +
++    OPENXT_DEBUG("Finished capture init\n");
 +    // Success
 +    return 0;
 +}
@@ -701,11 +724,9 @@ PATCHES
 +    int written = 0;
 +
 +    // Sanity checks
-+    if (!hw)
-+        return;
++    assert(hw);
 +
-+    if (openxt_argo_isconnected(conn) != true)
-+        return;
++    assert(openxt_argo_isconnected(conn) == true);
 +
 +    // Calculate the total amount of space that is available in the emulated
 +    // hardware. This is basically the total size of the buffer, minus the
@@ -814,6 +835,25 @@ PATCHES
 +    return;
 +}
 +
++/*
++// Punt the basic write down to alsa
++static size_t openxt_write(HWVoiceOut *hw, void *buf, size_t len)
++{
++
++    size_t sendlen;
++    openxt_argo_set_opcode(&snd_packet, OPENXT_WRITE);
++    openxt_argo_set_length(&snd_packet, WRITE_PACKET_LENGTH(len));
++    // Don't overflow our buffer. For now assume we'll never send more
++    sendlen = MIN(len, MAX_PCM_BUFFER_SIZE);    
++    write_packet->len = sendlen;
++    write_packet->bpf = hw->info.bytes_per_frame;
++    memcpy(write_packet->buf, buf, sendlen);
++    openxt_argo_send(conn, &snd_packet);
++
++    // Assume we wrote everything...bad assumption for now
++    return len;
++}
++*/
 +/////////////////////////////////////////////////////////////////////////////////////////////////////////
 +// Init / Fini                                                                                         //
 +/////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -827,9 +867,11 @@ PATCHES
 +{
 +    // Setup
 +    openxt_debug_init();
++    OPENXT_DEBUG("Hello!\n");
 +    conn = openxt_argo_open(XEN_ARGO_PORT_NONE, XEN_ARGO_DOMID_ANY, OPENXT_AUDIO_PORT, 0);
 +    openxt_assert(conn != NULL, NULL);
 +
++    OPENXT_DEBUG("Argo con opened\n");
 +    // Cleanup memory(safety)
 +    memset(&snd_packet, 0, sizeof(ArgoPacket));
 +    memset(&rcv_packet, 0, sizeof(ArgoPacket));
@@ -839,18 +881,22 @@ PATCHES
 +    openxt_checkp(playback_init_ack_packet = openxt_argo_get_body(&rcv_packet), NULL);
 +    openxt_checkp(playback_set_volume_packet = openxt_argo_get_body(&snd_packet), NULL);
 +    openxt_checkp(playback_get_available_ack_packet = openxt_argo_get_body(&rcv_packet), NULL);
++    openxt_checkp(write_packet = openxt_argo_get_body(&snd_packet), NULL);
 +
++    OPENXT_DEBUG("Pointer checks 1\n");
 +    // Pointer checks
 +    openxt_checkp(capture_packet = openxt_argo_get_body(&snd_packet), NULL);
 +    openxt_checkp(capture_ack_packet = openxt_argo_get_body(&rcv_packet), NULL);
 +    openxt_checkp(capture_init_ack_packet = openxt_argo_get_body(&rcv_packet), NULL);
 +    openxt_checkp(capture_get_available_ack_packet = openxt_argo_get_body(&rcv_packet), NULL);
 +
++    OPENXT_DEBUG("Pointer checks 2\n");
 +    // Size checks
 +    openxt_assert(openxt_argo_validate(sizeof(OpenXTPlaybackPacket)) == true, NULL);
 +    openxt_assert(openxt_argo_validate(sizeof(OpenXTPlaybackInitAckPacket)) == true, NULL);
 +    openxt_assert(openxt_argo_validate(sizeof(OpenXTPlaybackSetVolumePacket)) == true, NULL);
 +    openxt_assert(openxt_argo_validate(sizeof(OpenXTPlaybackGetAvailableAckPacket)) == true, NULL);
++    OPENXT_DEBUG("Pointer checks 3\n");
 +
 +    // Size checks
 +    openxt_assert(openxt_argo_validate(sizeof(OpenXTCapturePacket)) == true, NULL);
@@ -858,6 +904,7 @@ PATCHES
 +    openxt_assert(openxt_argo_validate(sizeof(OpenXTCaptureInitAckPacket)) == true, NULL);
 +    openxt_assert(openxt_argo_validate(sizeof(OpenXTCaptureGetAvailableAckPacket)) == true, NULL);
 +
++    OPENXT_DEBUG("Pointer checks 4\n");
 +    // Success. We don't have an init/fini pointer to return as we use
 +    // global memory like the other drivers, so like the other drivers we
 +    // just pass the address of this function, as returning NULL indicates
@@ -888,13 +935,14 @@ PATCHES
 +static struct audio_pcm_ops openxt_pcm_ops = {
 +    .init_out = openxt_playback_init,
 +    .fini_out = openxt_playback_fini,
-+    .run_buffer_out  = openxt_playback,
++    //.write = openxt_write,
++    .run_buffer_out = openxt_playback,
 +    .enable_out  = openxt_playback_enable,
 +    .volume_out = openxt_playback_volume,
 +
 +    .init_in  = openxt_capture_init,
 +    .fini_in  = openxt_capture_fini,
-+    .run_buffer_in   = openxt_capture,
++    .run_buffer_in = openxt_capture,
 +    .enable_in   = openxt_capture_enable,
 +    .volume_in = openxt_capture_volume
 +};
@@ -1274,7 +1322,7 @@ PATCHES
 +#endif // OPENXT_DEBUG_H
 --- /dev/null
 +++ b/audio/openxtpackets.h
-@@ -0,0 +1,127 @@
+@@ -0,0 +1,136 @@
 +//
 +// Copyright (c) 2015 Assured Information Security, Inc
 +//
@@ -1334,6 +1382,7 @@ PATCHES
 +    OPENXT_PLAYBACK                     = 50,
 +    OPENXT_CAPTURE                      = 51,
 +    OPENXT_CAPTURE_ACK                  = 53,
++	OPENXT_WRITE                        = 54,
 +
 +} PacketOpCode;
 +
@@ -1362,6 +1411,13 @@ PATCHES
 +    char samples[MAX_PCM_BUFFER_SIZE];
 +
 +} OpenXTPlaybackPacket;
++
++typedef struct __attribute__((packed)) {
++
++	size_t len;
++    int bpf;
++	char buf[MAX_PCM_BUFFER_SIZE];
++} OpenXTWritePacket;
 +
 +typedef struct  __attribute__((packed)) {
 +
@@ -1399,6 +1455,7 @@ PATCHES
 +} OpenXTCaptureAckPacket;
 +
 +#define PLAYBACK_PACKET_LENGTH(a) (sizeof(int32_t) + (sizeof(uint32_t) * a))
++#define WRITE_PACKET_LENGTH(a) (sizeof(size_t) + (sizeof(uint32_t) * a))
 +#define CAPTURE_ACK_PACKET_LENGTH(a) (sizeof(int32_t) + (sizeof(uint32_t) * a))
 +
 +#endif // OPENXT_PACKETS_H
