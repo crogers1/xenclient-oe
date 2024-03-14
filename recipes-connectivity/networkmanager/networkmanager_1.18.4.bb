@@ -51,7 +51,7 @@ EXTRA_OECONF = " \
 CFLAGS:append:libc-musl = " \
     -DRTLD_DEEPBIND=0 \
 "
-
+CFLAGS:append = " -fcommon "
 do_compile:prepend() {
     export GIR_EXTRA_LIBS_PATH="${B}/libnm/.libs:${B}/libnm-glib/.libs:${B}/libnm-util/.libs"
 }
