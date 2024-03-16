@@ -39,7 +39,7 @@ PATCHES
 ################################################################################
 --- a/hw/acpi/core.c
 +++ b/hw/acpi/core.c
-@@ -721,15 +721,24 @@ void acpi_send_gpe_event(ACPIREGS *ar, q
+@@ -730,15 +730,24 @@ void acpi_send_gpe_event(ACPIREGS *ar, q
  
  void acpi_update_sci(ACPIREGS *regs, qemu_irq irq)
  {
@@ -71,15 +71,62 @@ PATCHES
      acpi_pm_tmr_update(regs,
 --- a/hw/acpi/piix4.c
 +++ b/hw/acpi/piix4.c
-@@ -38,6 +38,7 @@
- #include "hw/acpi/memory_hotplug.h"
+@@ -43,6 +43,7 @@
  #include "hw/acpi/acpi_dev_interface.h"
- #include "hw/xen/xen.h"
+ #include "migration/vmstate.h"
+ #include "hw/core/cpu.h"
 +#include "hw/xen/xen_acpi_pm.h"
- #include "qom/cpu.h"
  #include "trace.h"
+ #include "qom/object.h"
  
-@@ -513,6 +514,11 @@ static void piix4_pm_realize(PCIDevice *
+@@ -56,46 +57,6 @@ struct pci_status {
+     uint32_t down;
+ };
+ 
+-struct PIIX4PMState {
+-    /*< private >*/
+-    PCIDevice parent_obj;
+-    /*< public >*/
+-
+-    MemoryRegion io;
+-    uint32_t io_base;
+-
+-    MemoryRegion io_gpe;
+-    ACPIREGS ar;
+-
+-    APMState apm;
+-
+-    PMSMBus smb;
+-    uint32_t smb_io_base;
+-
+-    qemu_irq irq;
+-    qemu_irq smi_irq;
+-    int smm_enabled;
+-    bool smm_compat;
+-    Notifier machine_ready;
+-    Notifier powerdown_notifier;
+-
+-    AcpiPciHpState acpi_pci_hotplug;
+-    bool use_acpi_hotplug_bridge;
+-    bool use_acpi_root_pci_hotplug;
+-
+-    uint8_t disable_s3;
+-    uint8_t disable_s4;
+-    uint8_t s4_val;
+-
+-    bool cpu_hotplug_legacy;
+-    AcpiCpuHotplug gpe_cpu;
+-    CPUHotplugState cpuhp_state;
+-
+-    MemHotplugState acpi_memory_hotplug;
+-};
+-
+-OBJECT_DECLARE_SIMPLE_TYPE(PIIX4PMState, PIIX4_PM)
+-
+ static void piix4_acpi_system_hot_add_init(MemoryRegion *parent,
+                                            PCIBus *bus, PIIX4PMState *s);
+ 
+@@ -491,6 +452,11 @@ static void piix4_pm_realize(PCIDevice *
      /* APM */
      apm_init(dev, &s->apm, apm_ctrl_changed, s);
  
@@ -91,7 +138,7 @@ PATCHES
      if (!s->smm_enabled) {
          /* Mark SMM as already inited to prevent SMM from running.  KVM does not
           * support SMM mode. */
-@@ -595,6 +601,7 @@ static void gpe_writeb(void *opaque, hwa
+@@ -575,6 +541,7 @@ static void gpe_writeb(void *opaque, hwa
  
      trace_piix4_gpe_writeb(addr, width, val);
      acpi_gpe_ioport_writeb(&s->ar, addr, val);
@@ -99,7 +146,7 @@ PATCHES
      acpi_update_sci(&s->ar, s->irq);
  }
  
-@@ -628,6 +635,30 @@ static void piix4_set_cpu_hotplug_legacy
+@@ -608,6 +575,30 @@ static void piix4_set_cpu_hotplug_legacy
      s->cpu_hotplug_legacy = value;
  }
  
@@ -130,16 +177,9 @@ PATCHES
  static void piix4_acpi_system_hot_add_init(MemoryRegion *parent,
                                             PCIBus *bus, PIIX4PMState *s)
  {
---- a/hw/xen/Makefile.objs
-+++ b/hw/xen/Makefile.objs
-@@ -4,3 +4,4 @@ common-obj-$(CONFIG_XEN) += xen-legacy-b
- obj-$(CONFIG_XEN_PCI_PASSTHROUGH) += xen-host-pci-device.o
- obj-$(CONFIG_XEN_PCI_PASSTHROUGH) += xen_pt.o xen_pt_config_init.o xen_pt_graphics.o xen_pt_msi.o
- obj-$(CONFIG_XEN_PCI_PASSTHROUGH) += xen_pt_load_rom.o
-+obj-$(CONFIG_XEN) += xen_acpi_pm.o
 --- /dev/null
 +++ b/hw/xen/xen_acpi_pm.c
-@@ -0,0 +1,1126 @@
+@@ -0,0 +1,1127 @@
 +/*
 + * APCI PM feature for battery/AC/lid management for OpenXT guests.
 + *
@@ -175,6 +215,7 @@ PATCHES
 +#include "hw/xen/xen.h"
 +#include "pci/pci.h"
 +#include "hw/i386/pc.h"
++#include "include/hw/southbridge/piix.h"
 +#include "hw/xen/xen_acpi_pm.h"
 +
 +/* Uncomment the following line to have debug messages about
@@ -273,8 +314,8 @@ PATCHES
 +typedef struct XenACPIPMState {
 +    SysBusDevice busdev;
 +
-+    void *space_io;                  /* MemoryRegion */
-+    void *piix4_dev;
++    MemoryRegion *space_io;                  /* MemoryRegion */
++    PIIX4PMState *piix4_dev;
 +
 +    struct xen_battery_manager xbm;
 +
@@ -1227,19 +1268,19 @@ PATCHES
 +    error_setg(errp, "Unable to initialize the Xen ACPI PM feature\n");
 +}
 +
-+void xen_acpi_pm_create(MemoryRegion *space_io, void *opaque)
++void xen_acpi_pm_create(MemoryRegion *space_io, PIIX4PMState *opaque)
 +{
 +    DeviceState *dev;
 +
-+    dev = qdev_create(NULL, TYPE_XEN_ACPI_PM);
-+    qdev_prop_set_ptr(dev, "space_io", space_io);
-+    qdev_prop_set_ptr(dev, "piix4_dev", opaque);
-+    qdev_init_nofail(dev);
++    dev = qdev_new(TYPE_XEN_ACPI_PM);
++    object_property_set_link(OBJECT(dev), "space_io", OBJECT(space_io), &error_abort);
++    object_property_set_link(OBJECT(dev), "piix4_dev", OBJECT(opaque), &error_abort);
++    xen_acpi_pm_realize(dev, &error_fatal);
 +}
 +
 +static Property xen_acpi_pm_properties[] = {
-+    DEFINE_PROP_PTR("space_io", XenACPIPMState, space_io),
-+    DEFINE_PROP_PTR("piix4_dev", XenACPIPMState, piix4_dev),
++    DEFINE_PROP_LINK("space_io", XenACPIPMState, space_io, TYPE_MEMORY_REGION, MemoryRegion*),
++    DEFINE_PROP_LINK("piix4_dev", XenACPIPMState, piix4_dev, TYPE_PIIX4_PM, PIIX4PMState*),
 +    DEFINE_PROP_END_OF_LIST(),
 +};
 +
@@ -1248,7 +1289,7 @@ PATCHES
 +    DeviceClass *dc = DEVICE_CLASS(klass);
 +
 +    dc->realize = xen_acpi_pm_realize;
-+    dc->props = xen_acpi_pm_properties;
++	device_class_set_props(dc, xen_acpi_pm_properties);
 +    set_bit(DEVICE_CATEGORY_MISC, dc->categories);
 +    dc->desc = "Xen ACPI PM device";
 +}
@@ -1266,16 +1307,75 @@ PATCHES
 +}
 +
 +type_init(xen_acpi_pm_register_types)
---- a/include/hw/i386/pc.h
-+++ b/include/hw/i386/pc.h
-@@ -248,6 +248,7 @@ int cmos_get_fd_drive_type(FloppyDriveTy
+--- a/include/hw/southbridge/piix.h
++++ b/include/hw/southbridge/piix.h
+@@ -14,12 +14,19 @@
+ 
+ #include "hw/pci/pci.h"
+ #include "qom/object.h"
++#include "hw/acpi/acpi.h"
++#include "hw/acpi/cpu_hotplug.h"
++#include "hw/acpi/memory_hotplug.h"
++#include "hw/acpi/pcihp.h"
++#include "hw/i2c/pm_smbus.h"
++#include "hw/isa/apm.h"
+ 
+ #define TYPE_PIIX4_PM "PIIX4_PM"
+ 
  I2CBus *piix4_pm_init(PCIBus *bus, int devfn, uint32_t smb_io_base,
                        qemu_irq sci_irq, qemu_irq smi_irq,
                        int smm_enabled, DeviceState **piix4_pm);
 +void piix4_pm_set_gpe_sts_raise_sci(void *opaque, uint8_t bit);
  
- /* hpet.c */
- extern int no_hpet;
+ /* PIRQRC[A:D]: PIRQx Route Control Registers */
+ #define PIIX_PIRQCA 0x60
+@@ -36,6 +43,46 @@ I2CBus *piix4_pm_init(PCIBus *bus, int d
+ #define PIIX_NUM_PIC_IRQS       16      /* i8259 * 2 */
+ #define PIIX_NUM_PIRQS          4ULL    /* PIRQ[A-D] */
+ 
++struct PIIX4PMState {
++    /*< private >*/
++    PCIDevice parent_obj;
++    /*< public >*/
++
++    MemoryRegion io;
++    uint32_t io_base;
++
++    MemoryRegion io_gpe;
++    ACPIREGS ar;
++
++    APMState apm;
++
++    PMSMBus smb;
++    uint32_t smb_io_base;
++
++    qemu_irq irq;
++    qemu_irq smi_irq;
++    int smm_enabled;
++    bool smm_compat;
++    Notifier machine_ready;
++    Notifier powerdown_notifier;
++
++    AcpiPciHpState acpi_pci_hotplug;
++    bool use_acpi_hotplug_bridge;
++    bool use_acpi_root_pci_hotplug;
++
++    uint8_t disable_s3;
++    uint8_t disable_s4;
++    uint8_t s4_val;
++
++    bool cpu_hotplug_legacy;
++    AcpiCpuHotplug gpe_cpu;
++    CPUHotplugState cpuhp_state;
++
++    MemHotplugState acpi_memory_hotplug;
++};
++
++OBJECT_DECLARE_SIMPLE_TYPE(PIIX4PMState, PIIX4_PM)
++
+ struct PIIXState {
+     PCIDevice dev;
+ 
 --- /dev/null
 +++ b/include/hw/xen/xen_acpi_pm.h
 @@ -0,0 +1,43 @@
@@ -1304,12 +1404,12 @@ PATCHES
 +#define XEN_ACPI_PM_H_
 +
 +#define TYPE_XEN_ACPI_PM "xen-acpi-pm"
-+
++#include "hw/southbridge/piix.h"
 +/*
 + * This function is use for the initialization of the battery/AC/lid devices.
 + * These device are linked to the ACPI devices in the ssdt_pm.asl module.
 + */
-+void xen_acpi_pm_create(MemoryRegion *space_io, void *opaque);
++void xen_acpi_pm_create(MemoryRegion *space_io, PIIX4PMState *opaque);
 +
 +/* Set to enable the Xen ACPI PM device support */
 +void xen_acpi_pm_set_enabled(bool enable);
@@ -1324,43 +1424,42 @@ PATCHES
 +#endif /* !XEN_ACPI_PM_H_ */
 --- a/qemu-options.hx
 +++ b/qemu-options.hx
-@@ -3699,6 +3699,9 @@ DEF("xen-domid-restrict", 0, QEMU_OPTION
-     "                        to specified domain id. (Does not affect\n"
-     "                        xenpv machine type).\n",
-     QEMU_ARCH_ALL)
+@@ -4103,6 +4103,9 @@ SRST
+     available if KVM support is enabled when compiling.
+ ERST
+ 
 +DEF("xen-acpi-pm", 0, QEMU_OPTION_xen_acpi_pm,
 +    "-xen-acpi-pm     use the Xen ACPI PM emulated battery/AC/lid feature\n",
 +    QEMU_ARCH_ALL)
- STEXI
- @item -xen-domid @var{id}
- @findex -xen-domid
-@@ -3709,6 +3712,9 @@ Attach to existing xen domain.
- libxl will use this when starting QEMU (XEN only).
- @findex -xen-domid-restrict
- Restrict set of available xen operations to specified domain id (XEN only).
-+@item -xen-acpi-pm
-+@findex -xen-acpi-pm
+ DEF("xen-domid", HAS_ARG, QEMU_OPTION_xen_domid,
+     "-xen-domid id   specify xen guest domain id\n", QEMU_ARCH_ALL)
+ DEF("xen-attach", 0, QEMU_OPTION_xen_attach,
+@@ -4122,6 +4125,8 @@ SRST
+     Attach to existing xen domain. libxl will use this when starting
+     QEMU (XEN only). Restrict set of available xen operations to
+     specified domain id (XEN only).
++``-xen-acpi-pm``
 +Use the Xen ACPI PM emulated battery/AC/lid feature.
- ETEXI
+ ERST
  
  DEF("no-reboot", 0, QEMU_OPTION_no_reboot, \
---- a/vl.c
-+++ b/vl.c
-@@ -128,6 +128,7 @@ int main(int argc, char **argv)
- #include "qapi/qapi-commands-ui.h"
+--- a/softmmu/vl.c
++++ b/softmmu/vl.c
+@@ -125,6 +125,7 @@
+ #include "qapi/qmp/qdict.h"
  #include "qapi/qmp/qerror.h"
  #include "sysemu/iothread.h"
 +#include "hw/xen/xen_acpi_pm.h"
  #include "qemu/guest-random.h"
  
- #define MAX_VIRTIO_CONSOLES 1
-@@ -3697,6 +3698,15 @@ int main(int argc, char **argv, char **e
+ #include "config-host.h"
+@@ -3532,6 +3533,15 @@ void qemu_init(int argc, char **argv, ch
                  }
                  xen_domid_restrict = true;
                  break;
 +            case QEMU_OPTION_xen_acpi_pm:
 +                /* Use the OpenXT emulated battery/AC/lid devices */
-+                if (!(xen_available())) {
++                if (!(accel_find("xen"))) {
 +                    printf("Option %s not supported for this target\n",
 +                           popt->name);
 +                    exit(1);
@@ -1368,5 +1467,54 @@ PATCHES
 +                xen_acpi_pm_set_enabled(true);
 +                break;
              case QEMU_OPTION_trace:
-                 g_free(trace_file);
-                 trace_file = trace_opt_parse(optarg);
+                 trace_opt_parse(optarg);
+                 break;
+--- a/hw/xen/meson.build
++++ b/hw/xen/meson.build
+@@ -5,6 +5,7 @@ softmmu_ss.add(when: ['CONFIG_XEN', xen]
+   'xen-legacy-backend.c',
+   'xen_devconfig.c',
+   'xen_pvdev.c',
++  'xen_acpi_pm.c',
+ ))
+ 
+ xen_specific_ss = ss.source_set()
+--- a/hw/core/qdev-properties-system.c
++++ b/hw/core/qdev-properties-system.c
+@@ -1119,3 +1119,26 @@ const PropertyInfo qdev_prop_uuid = {
+     .set   = set_uuid,
+     .set_default_value = set_default_uuid_auto,
+ };
++
++/*static void set_memory_region(Object *obj, Visitor *v, const char *name, void *opaque,
++                    Error **errp)
++{
++    Property *prop = opaque;
++	MemoryRegion **mr = object_field_prop_ptr(obj, prop);
++
++	MemoryRegion 
++    if (!visit_type_MemoryRegion(v, name, ) {
++
++}
++static void set_default_memory_region_auto(ObjectProperty *op, const Property *prop)
++{
++	object_property_set_default_uint(op, 0);
++}
++
++const PropertyInfo qdev_prop_mr = {
++	.name  = "MemoryRegion",
++	.description = "Memory Region pointer",
++	.get   = get_memory_region,
++	.set   = set_memory_region,
++	.set_default_value = set_default_memory_region_auto,
++*/
+--- a/include/hw/qdev-properties-system.h
++++ b/include/hw/qdev-properties-system.h
+@@ -22,6 +22,7 @@ extern const PropertyInfo qdev_prop_audi
+ extern const PropertyInfo qdev_prop_off_auto_pcibar;
+ extern const PropertyInfo qdev_prop_pcie_link_speed;
+ extern const PropertyInfo qdev_prop_pcie_link_width;
++extern const PropertyInfo qdev_prop_mr;
+ 
+ #define DEFINE_PROP_PCI_DEVFN(_n, _s, _f, _d)                   \
+     DEFINE_PROP_SIGNED(_n, _s, _f, _d, qdev_prop_pci_devfn, int32_t)

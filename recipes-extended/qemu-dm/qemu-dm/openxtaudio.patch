@@ -53,25 +53,25 @@ None
 PATCHES
 ================================================================================
 =======
---- a/audio/Makefile.objs
-+++ b/audio/Makefile.objs
-@@ -4,10 +4,16 @@ common-obj-$(CONFIG_AUDIO_COREAUDIO) +=
- common-obj-$(CONFIG_AUDIO_DSOUND) += dsoundaudio.o
- common-obj-$(CONFIG_AUDIO_PT_INT) += audio_pt_int.o
- common-obj-$(CONFIG_AUDIO_WIN_INT) += audio_win_int.o
-+common-obj-$(CONFIG_AUDIO_OPENXT) += alsadef.o openxtargo.o
-+common-obj-$(CONFIG_AUDIO_OPENXT) += openxtdebug.o openxtaudio.o
- common-obj-y += wavcapture.o
- 
- coreaudio.o-libs := $(COREAUDIO_LIBS)
- dsoundaudio.o-libs := $(DSOUND_LIBS)
-+openxtargo.o-cflags := $(LIBARGO_CFLAGS)
-+openxtargo.o-cflags := $(LIBARGO_CFLAGS)
-+openxtaudio.o-libs := $(LIBARGO_LIBS)
-+openxtaudio.o-libs := $(LIBARGO_LIBS)
- 
- # alsa module
- common-obj-$(CONFIG_AUDIO_ALSA) += alsa.mo
+#--- a/audio/Makefile.objs
+#+++ b/audio/Makefile.objs
+#@@ -4,10 +4,16 @@ common-obj-$(CONFIG_AUDIO_COREAUDIO) +=
+# common-obj-$(CONFIG_AUDIO_DSOUND) += dsoundaudio.o
+# common-obj-$(CONFIG_AUDIO_PT_INT) += audio_pt_int.o
+# common-obj-$(CONFIG_AUDIO_WIN_INT) += audio_win_int.o
+#+common-obj-$(CONFIG_AUDIO_OPENXT) += alsadef.o openxtargo.o
+#+common-obj-$(CONFIG_AUDIO_OPENXT) += openxtdebug.o openxtaudio.o
+# common-obj-y += wavcapture.o
+# 
+# coreaudio.o-libs := $(COREAUDIO_LIBS)
+# dsoundaudio.o-libs := $(DSOUND_LIBS)
+#+openxtargo.o-cflags := $(LIBARGO_CFLAGS)
+#+openxtargo.o-cflags := $(LIBARGO_CFLAGS)
+#+openxtaudio.o-libs := $(LIBARGO_LIBS)
+#+openxtaudio.o-libs := $(LIBARGO_LIBS)
+# 
+# # alsa module
+# common-obj-$(CONFIG_AUDIO_ALSA) += alsa.mo
 --- /dev/null
 +++ b/audio/alsadef.c
 @@ -0,0 +1,151 @@
@@ -266,7 +266,7 @@ PATCHES
 +#endif // ALSADEF_H
 --- /dev/null
 +++ b/audio/openxtaudio.c
-@@ -0,0 +1,743 @@
+@@ -0,0 +1,650 @@
 +//
 +// Copyright (c) 2015 Assured Information Security, Inc
 +//
@@ -475,29 +475,29 @@ PATCHES
 +///
 +/// @return the total number of samples that were processed.
 +///
-+static int openxt_playback(HWVoiceOut *hw, int live)
++static void openxt_playback(HWVoiceOut *hw)
 +{
-+    int ret;
 +    int decr;
 +    int samples;
 +
 +    // Sanity checks
-+    openxt_checkp(hw, 0);
-+    openxt_assert_quiet(openxt_argo_isconnected(conn) == true, 0);
++    if(!hw)
++        return;
++    
++    if(openxt_argo_isconnected(conn) != true)
++        return;
 +
 +    // We need to find out how much space is available in ALSA so that we
 +    // know how many samples to read.
-+    ret = openxt_send_blank_packet(OPENXT_PLAYBACK_GET_AVAILABLE);
-+    openxt_assert(ret == 0, 0);
-+    ret = openxt_argo_recv(conn, &rcv_packet);
-+    openxt_assert(ret == sizeof(OpenXTPlaybackGetAvailableAckPacket), 0);
++    openxt_send_blank_packet(OPENXT_PLAYBACK_GET_AVAILABLE);
++    openxt_argo_recv(conn, &rcv_packet);
 +
 +    // The following figures out how many samples we "can" process in this
 +    // iteration (as this function is called by a timer in QEMU). Basically,
 +    // that total number of samples we can process is the lower value of either
 +    // the total number of samples provided to the hardware (live), and the
 +    // total number of samples that ALSA can currently take.
-+    decr = audio_MIN(live, playback_get_available_ack_packet->available);
++    decr = playback_get_available_ack_packet->available;
 +
 +    // Now that we know how many samples we can send to ALSA to process, we
 +    // need to package these samples up into packets and send them to the
@@ -512,14 +512,12 @@ PATCHES
 +        // Make sure that we are not overrunning the circular buffer that QEMU
 +        // has, as well as make sure that we are not overrunning the packet
 +        // buffer.
-+        len = audio_MIN(len, hw->samples - hw->rpos);
-+        len = audio_MIN(len, MAX_PCM_BUFFER_SIZE / sizeof(uint32_t));
++        len = MIN(len, hw->mix_buf->size - hw->mix_buf->pos);
++        len = MIN(len, MAX_PCM_BUFFER_SIZE / sizeof(uint32_t));
 +
 +        // Setup the packet.
-+        ret = openxt_argo_set_opcode(&snd_packet, OPENXT_PLAYBACK);
-+        openxt_assert(ret == 0, 0);
-+        ret = openxt_argo_set_length(&snd_packet, PLAYBACK_PACKET_LENGTH(len));
-+        openxt_assert(ret == 0, 0);
++        openxt_argo_set_opcode(&snd_packet, OPENXT_PLAYBACK);
++        openxt_argo_set_length(&snd_packet, PLAYBACK_PACKET_LENGTH(len));
 +
 +        // Fill in the packet's body. Note that the hw->clip function is
 +        // basically a memcpy, the only difference is that len is in samples
@@ -530,35 +528,15 @@ PATCHES
 +        // of 16 bytes per samples. This function does the copy, and conversion
 +        // for us.
 +        playback_packet->num_samples = len;
-+        hw->clip(playback_packet->samples, hw->mix_buf + hw->rpos, len);
++        hw->clip(playback_packet->samples, hw->mix_buf->samples + hw->mix_buf->pos, len);
 +
 +        // Send the packet to the helper.
-+        ret = openxt_argo_send(conn, &snd_packet);
-+        openxt_assert(ret == PLAYBACK_PACKET_LENGTH(len), 0);
++        openxt_argo_send(conn, &snd_packet);
 +
 +        // We need to advance the internal pointers.
 +        samples -= len;
-+        hw->rpos = (hw->rpos + len) % hw->samples;
++        hw->mix_buf->pos = (hw->mix_buf->pos + len) % hw->mix_buf->size;
 +    }
-+
-+    // Success
-+    return decr;
-+}
-+
-+///
-+/// This is one of QEMU's required functions. All of the other drivers
-+/// just pass this to QEMU's built in function. No idea what it actually
-+/// does.
-+///
-+/// @param sw N/A
-+/// @param buf N/A
-+/// @param len N/A
-+///
-+/// @return N/A
-+///
-+static int openxt_write(SWVoiceOut *sw, void *buf, int len)
-+{
-+    return audio_pcm_sw_write(sw, buf, len);
 +}
 +
 +///
@@ -600,76 +578,39 @@ PATCHES
 +/// @return -1 on not supported or error
 +///         0 success / supported
 +///
-+static int openxt_playback_ctl(HWVoiceOut *hw, int cmd, ...)
++static void openxt_playback_enable(HWVoiceOut *hw, bool enable)
 +{
-+    int ret;
-+
 +    // Sanity checks
-+    openxt_assert_quiet(openxt_argo_isconnected(conn) == true, -ENODEV);
++    if(openxt_argo_isconnected(conn) != true)
++        return;
 +
-+    // Process the command
-+    switch(cmd) {
-+
-+        case VOICE_ENABLE:
-+            ret = openxt_send_blank_packet(OPENXT_PLAYBACK_ENABLE_VOICE);
-+            openxt_assert(ret == 0, -1);
-+
-+            // Success
-+            return 0;
-+
-+        case VOICE_DISABLE:
-+            ret = openxt_send_blank_packet(OPENXT_PLAYBACK_DISABLE_VOICE);
-+            openxt_assert(ret == 0, -1);
-+
-+            // Success
-+            return 0;
-+
-+        case VOICE_VOLUME:
-+        {
-+            va_list va;
-+            SWVoiceOut *sw = NULL;
-+
-+            // Get the SWVoiceOut from the args
-+            va_start(va, cmd);
-+            sw = va_arg(va, SWVoiceOut*);
-+            va_end(va);
-+
-+            // Make sure that we actually got an argument back.
-+            if (sw != NULL) {
-+
-+                // Setup the packet
-+                ret = openxt_argo_set_opcode(&snd_packet, OPENXT_PLAYBACK_SET_VOLUME);
-+                openxt_assert(ret == 0, -1);
-+                ret = openxt_argo_set_length(&snd_packet, sizeof(OpenXTPlaybackSetVolumePacket));
-+                openxt_assert(ret == 0, -1);
-+
-+                // Setup the packet.
-+                if (sw->vol.mute) {
-+
-+                    playback_set_volume_packet->vol = 0;
-+                    playback_set_volume_packet->enabled = 0;
-+
-+                } else {
-+
-+                    playback_set_volume_packet->vol = (sw->vol.l * 100) / UINT_MAX;
-+                    playback_set_volume_packet->enabled = 1;
-+                }
-+
-+                // Send the packet
-+                ret = openxt_argo_send(conn, &snd_packet);
-+                openxt_assert(ret == sizeof(OpenXTPlaybackSetVolumePacket), -1);
-+
-+                // Done
-+                return 0;
-+            }
-+
-+            // Failure
-+            return -1;
-+        }
-+
-+        default:
-+            return -1;
++    if (enable) {
++        openxt_send_blank_packet(OPENXT_PLAYBACK_ENABLE_VOICE);
++    } else {
++        openxt_send_blank_packet(OPENXT_PLAYBACK_DISABLE_VOICE);
 +    }
++}
++
++static void openxt_playback_volume(HWVoiceOut *hw, Volume *vol)
++{
++    // Setup the packet
++    openxt_argo_set_opcode(&snd_packet, OPENXT_PLAYBACK_SET_VOLUME);
++    openxt_argo_set_length(&snd_packet, sizeof(OpenXTPlaybackSetVolumePacket));
++
++    // Setup the packet.
++    if (vol->mute) {
++
++        playback_set_volume_packet->vol = 0;
++        playback_set_volume_packet->enabled = 0;
++
++    } else {
++
++        playback_set_volume_packet->vol = (vol->vol[0] * 100) / UINT_MAX;
++        playback_set_volume_packet->enabled = 1;
++    }
++
++    // Send the packet
++    openxt_argo_send(conn, &snd_packet);
 +}
 +
 +/////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -753,23 +694,25 @@ PATCHES
 +/// @param hw points to a structure that QEMU provides.
 +/// @return the total number of samples that were processed.
 +///
-+static int openxt_capture(HWVoiceIn *hw)
++static void openxt_capture(HWVoiceIn *hw)
 +{
-+    int ret;
 +    int decr;
 +    int samples;
 +    int written = 0;
 +
 +    // Sanity checks
-+    openxt_checkp(hw, 0);
-+    openxt_assert_quiet(openxt_argo_isconnected(conn) == true, 0);
++    if (!hw)
++        return;
++
++    if (openxt_argo_isconnected(conn) != true)
++        return;
 +
 +    // Calculate the total amount of space that is available in the emulated
 +    // hardware. This is basically the total size of the buffer, minus the
 +    // number of samples that are "live" in the buffer. Note that we use the
 +    // max function as it is possible to get a negative here, so we check for
 +    // that.
-+    decr = audio_MAX(hw->samples - audio_pcm_hw_get_live_in(hw), 0);
++    decr = hw->conv_buf->size;
 +
 +    // Loop through all of the samples that need to be processed, get them
 +    // from don0, and provide them to the emulated hardware.
@@ -780,14 +723,12 @@ PATCHES
 +        // Make sure that we are not overrunning the circular buffer that QEMU
 +        // has, as well as make sure that we are not overrunning the packet
 +        // buffer.
-+        len = audio_MIN(len, hw->samples - hw->wpos);
-+        len = audio_MIN(len, MAX_PCM_BUFFER_SIZE / sizeof(uint32_t));
++        len = MIN(len, hw->conv_buf->size - hw->conv_buf->pos);
++        len = MIN(len, MAX_PCM_BUFFER_SIZE / sizeof(uint32_t));
 +
 +        // Setup the packet so that we can ask for a set of samples from dom0
-+        ret = openxt_argo_set_opcode(&snd_packet, OPENXT_CAPTURE);
-+        openxt_assert(ret == 0, 0);
-+        ret = openxt_argo_set_length(&snd_packet, sizeof(OpenXTCapturePacket));
-+        openxt_assert(ret == 0, 0);
++        openxt_argo_set_opcode(&snd_packet, OPENXT_CAPTURE);
++        openxt_argo_set_length(&snd_packet, sizeof(OpenXTCapturePacket));
 +
 +        // Tell dom0 how many samples need to be collected.
 +        capture_packet->num_samples = len;
@@ -799,10 +740,8 @@ PATCHES
 +        // messed up audio helper to give use a num_samples that doesn't correlate
 +        // with the actually number of samples. This will not result in an overflow
 +        // but it would result in garbage being sent to QEMU (not a big deal).
-+        ret = openxt_argo_send(conn, &snd_packet);
-+        openxt_assert(ret == sizeof(OpenXTCapturePacket), 0);
-+        ret = openxt_argo_recv(conn, &rcv_packet);
-+        openxt_assert(ret >= 0, 0);
++        openxt_argo_send(conn, &snd_packet);
++        openxt_argo_recv(conn, &rcv_packet);
 +
 +        // Check to see if we got any samples back. If we didn't there is nothing
 +        // to do, and we can stop
@@ -813,12 +752,12 @@ PATCHES
 +        // basically a memcpy, the only difference is that len is in samples
 +        // instead of bytes. The destination is the current position in the circular
 +        // buffer that QEMU provides, and the source is our packet.
-+        hw->conv(hw->conv_buf + hw->wpos, capture_ack_packet->samples, capture_ack_packet->num_samples);
++        hw->conv(hw->conv_buf->samples + hw->conv_buf->pos, capture_ack_packet->samples, capture_ack_packet->num_samples);
 +
 +        // We need to advance the internal pointers.
 +        samples -= capture_ack_packet->num_samples;
 +        written += capture_ack_packet->num_samples;
-+        hw->wpos = (hw->wpos + capture_ack_packet->num_samples) % hw->samples;
++        hw->conv_buf->pos = (hw->conv_buf->pos + capture_ack_packet->num_samples) % hw->conv_buf->size;
 +
 +        // If the number of samples that we got back does not match the number
 +        // of samples that we asked for, it means that the source is out of
@@ -826,25 +765,6 @@ PATCHES
 +        if (capture_ack_packet->num_samples != len)
 +            break;
 +    }
-+
-+    // Success
-+    return written;
-+}
-+
-+///
-+/// This is one of QEMU's required functions. All of the other drivers
-+/// just pass this to QEMU's built in function. No idea what it actually
-+/// does.
-+///
-+/// @param sw N/A
-+/// @param buf N/A
-+/// @param len N/A
-+///
-+/// @return N/A
-+///
-+static int openxt_read(SWVoiceIn *sw, void *buf, int size)
-+{
-+    return audio_pcm_sw_read(sw, buf, size);
 +}
 +
 +///
@@ -870,41 +790,28 @@ PATCHES
 +///
 +/// @return -1 on not supported or error
 +///         0 success / supported
-+static int openxt_capture_ctl(HWVoiceIn *hw, int cmd, ...)
++static void openxt_capture_enable(HWVoiceIn *hw, bool enable)
 +{
-+    int ret;
-+
 +    // Sanity checks
-+    openxt_assert_quiet(openxt_argo_isconnected(conn) == true, -ENODEV);
++    if(openxt_argo_isconnected(conn) != true)
++        return;
 +
-+    // Process the command
-+    switch(cmd) {
-+
-+        case VOICE_ENABLE:
-+            ret = openxt_send_blank_packet(OPENXT_CAPTURE_ENABLE_VOICE);
-+            openxt_assert(ret == 0, -1);
-+
-+            // Success
-+            return 0;
-+
-+        case VOICE_DISABLE:
-+            ret = openxt_send_blank_packet(OPENXT_CAPTURE_DISABLE_VOICE);
-+            openxt_assert(ret == 0, -1);
-+
-+            // Success
-+            return 0;
-+
-+        case VOICE_VOLUME:
-+
-+            // TODO: We need to implement capture audio volume support. To support this
-+            // a lot of work needs to be done to the audio helper side, as only one VM
-+            // should have access to the capture device at a time, which it doesn't do
-+            // now.
-+            return -1;
-+
-+        default:
-+            return -1;
++    if(enable) {
++        openxt_send_blank_packet(OPENXT_CAPTURE_ENABLE_VOICE);
++    } else {
++        openxt_send_blank_packet(OPENXT_CAPTURE_DISABLE_VOICE);
 +    }
++
++}
++
++static void openxt_capture_volume(HWVoiceIn *hw, Volume *vol)
++{
++
++    // TODO: We need to implement capture audio volume support. To support this
++    // a lot of work needs to be done to the audio helper side, as only one VM
++    // should have access to the capture device at a time, which it doesn't do
++    // now.
++    return;
 +}
 +
 +/////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -981,15 +888,15 @@ PATCHES
 +static struct audio_pcm_ops openxt_pcm_ops = {
 +    .init_out = openxt_playback_init,
 +    .fini_out = openxt_playback_fini,
-+    .run_out  = openxt_playback,
-+    .write    = openxt_write,
-+    .ctl_out  = openxt_playback_ctl,
++    .run_buffer_out  = openxt_playback,
++    .enable_out  = openxt_playback_enable,
++    .volume_out = openxt_playback_volume,
 +
 +    .init_in  = openxt_capture_init,
 +    .fini_in  = openxt_capture_fini,
-+    .run_in   = openxt_capture,
-+    .read     = openxt_read,
-+    .ctl_in   = openxt_capture_ctl
++    .run_buffer_in   = openxt_capture,
++    .enable_in   = openxt_capture_enable,
++    .volume_in = openxt_capture_volume
 +};
 +
 +static struct audio_driver openxt_audio_driver = {
@@ -2001,16 +1908,7 @@ PATCHES
 +#endif // OPENXT_ARGO_H
 --- a/configure
 +++ b/configure
-@@ -905,7 +905,7 @@ Haiku)
- ;;
- Linux)
-   audio_drv_list="try-pa oss"
--  audio_possible_drivers="oss alsa sdl pa"
-+  audio_possible_drivers="oss alsa sdl pa openxt"
-   linux="yes"
-   linux_user="yes"
-   kvm="yes"
-@@ -1426,6 +1426,8 @@ for opt do
+@@ -1083,6 +1083,8 @@ for opt do
    ;;
    --disable-openxt-stubdom) stubdom="no"
    ;;
@@ -2019,54 +1917,107 @@ PATCHES
    --enable-xenpt-msix) xenpt_hide_msix="no"
    ;;
    --disable-xenpt-msix) xenpt_hide_msix="yes"
-@@ -3488,6 +3490,10 @@ for drv in $audio_drv_list; do
-       oss_libs="$oss_lib"
-     ;;
+@@ -3475,6 +3477,8 @@ echo "GIT_SUBMODULES_ACTION=$git_submodu
  
-+    openxt)
-+        libargo="yes"
-+    ;;
+ echo "ARCH=$ARCH" >> $config_host_mak
+ 
++echo "CONFIG_AUDIO_OPENXT=y" >> $config_host_mak
 +
-     *)
-     echo "$audio_possible_drivers" | grep -q "\<$drv\>" || {
-         error_exit "Unknown driver '$drv' selected" \
+ if test "$debug_tcg" = "yes" ; then
+   echo "CONFIG_DEBUG_TCG=y" >> $config_host_mak
+ fi
 --- a/qapi/audio.json
 +++ b/qapi/audio.json
-@@ -274,7 +274,7 @@
+@@ -386,7 +386,7 @@
  # Since: 4.0
  ##
  { 'enum': 'AudiodevDriver',
--  'data': [ 'none', 'alsa', 'coreaudio', 'dsound', 'oss', 'pa', 'sdl',
-+  'data': [ 'none', 'alsa', 'coreaudio', 'dsound', 'openxt', 'oss', 'pa', 'sdl',
-             'spice', 'wav' ] }
-
+-  'data': [ 'none', 'alsa', 'coreaudio', 'dsound', 'jack', 'oss', 'pa',
++  'data': [ 'none', 'alsa', 'coreaudio', 'dsound', 'openxt', 'jack', 'oss', 'pa',
+             'sdl', 'spice', 'wav' ] }
+ 
  ##
-@@ -302,6 +302,7 @@
-     'coreaudio': 'AudiodevCoreaudioOptions',
+@@ -415,6 +415,7 @@
      'dsound':    'AudiodevDsoundOptions',
+     'jack':      'AudiodevJackOptions',
      'oss':       'AudiodevOssOptions',
 +    'openxt':    'AudiodevGenericOptions',
      'pa':        'AudiodevPaOptions',
-     'sdl':       'AudiodevGenericOptions',
+     'sdl':       'AudiodevSdlOptions',
      'spice':     'AudiodevGenericOptions',
 --- a/audio/audio.c
 +++ b/audio/audio.c
-@@ -1661,6 +1661,7 @@ void audio_create_pdos(Audiodev *dev)
+@@ -2001,6 +2001,7 @@ void audio_create_pdos(Audiodev *dev)
          CASE(ALSA, alsa, Alsa);
          CASE(COREAUDIO, coreaudio, Coreaudio);
          CASE(DSOUND, dsound, );
 +        CASE(OPENXT, openxt, );
+         CASE(JACK, jack, Jack);
          CASE(OSS, oss, Oss);
          CASE(PA, pa, Pa);
-         CASE(SDL, sdl, );
 --- a/audio/audio_template.h
 +++ b/audio/audio_template.h
-@@ -311,6 +311,8 @@ AudiodevPerDirectionOptions *glue(audio_
+@@ -329,6 +329,8 @@ AudiodevPerDirectionOptions *glue(audio_
              dev->u.coreaudio.TYPE);
      case AUDIODEV_DRIVER_DSOUND:
          return dev->u.dsound.TYPE;
 +    case AUDIODEV_DRIVER_OPENXT:
 +        return dev->u.openxt.TYPE;
+     case AUDIODEV_DRIVER_JACK:
+         return qapi_AudiodevJackPerDirectionOptions_base(dev->u.jack.TYPE);
      case AUDIODEV_DRIVER_OSS:
-         return qapi_AudiodevOssPerDirectionOptions_base(dev->u.oss.TYPE);
-     case AUDIODEV_DRIVER_PA:
+--- a/meson.build
++++ b/meson.build
+@@ -946,6 +946,12 @@ if not get_option('dsound').auto() or (t
+   endif
+ endif
+ 
++openxt = not_found
++if 'CONFIG_AUDIO_OPENXT' in config_host
++  openxt = declare_dependency(compile_args: config_host['LIBARGO_CFLAGS'].split(),
++                              link_args: config_host['LIBARGO_LIBS'].split())
++endif
++
+ coreaudio = not_found
+ if not get_option('coreaudio').auto() or (targetos == 'darwin' and have_system)
+   coreaudio = dependency('appleframeworks', modules: 'CoreAudio',
+@@ -1310,6 +1316,7 @@ if have_system
+     'alsa': alsa.found(),
+     'coreaudio': coreaudio.found(),
+     'dsound': dsound.found(),
++    'openxt': openxt.found(),
+     'jack': jack.found(),
+     'oss': oss.found(),
+     'pa': pulse.found(),
+--- a/meson_options.txt
++++ b/meson_options.txt
+@@ -13,7 +13,7 @@ option('sphinx_build', type : 'string',
+ option('default_devices', type : 'boolean', value : true,
+        description: 'Include a default selection of devices in emulators')
+ option('audio_drv_list', type: 'array', value: ['default'],
+-       choices: ['alsa', 'coreaudio', 'default', 'dsound', 'jack', 'oss', 'pa', 'sdl'],
++       choices: ['alsa', 'coreaudio', 'default', 'dsound', 'openxt', 'jack', 'oss', 'pa', 'sdl'],
+        description: 'Set audio driver list')
+ option('fuzzing_engine', type : 'string', value : '',
+        description: 'fuzzing engine library for OSS-Fuzz')
+--- a/audio/meson.build
++++ b/audio/meson.build
+@@ -16,12 +16,17 @@ foreach m : [
+   ['oss', oss, files('ossaudio.c')],
+   ['pa', pulse, files('paaudio.c')],
+   ['sdl', sdl, files('sdlaudio.c')],
++  ['openxt', openxt, files('openxtaudio.c', 'openxtargo.c', 'openxtdebug.c', 'alsadef.c')],
+   ['jack', jack, files('jackaudio.c')],
+   ['spice', spice, files('spiceaudio.c')]
+ ]
+   if m[1].found()
+     module_ss = ss.source_set()
+-    module_ss.add(m[1], m[2])
++    if m[0] == 'openxt'
++      module_ss.add(m[1], m[2], argo)
++    else
++      module_ss.add(m[1], m[2])
++    endif
+     audio_modules += {m[0] : module_ss}
+   endif
+ endforeach

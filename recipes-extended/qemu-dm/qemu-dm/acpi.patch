@@ -44,13 +44,13 @@ PATCHES
 +#else
 +# include "stdio.h"
 +#endif
- #include "sysemu/sysemu.h"
- #include "hw/hw.h"
+ #include "hw/irq.h"
  #include "hw/acpi/acpi.h"
+ #include "hw/nvram/fw_cfg.h"
 @@ -32,6 +37,7 @@
- #include "qemu/error-report.h"
  #include "qemu/module.h"
  #include "qemu/option.h"
+ #include "sysemu/runstate.h"
 +#include "hw/xen/xen.h" /* needed for 'xenstore_update_power' */
  
  struct acpi_table_header {
@@ -76,9 +76,9 @@ PATCHES
 --- a/hw/acpi/piix4.c
 +++ b/hw/acpi/piix4.c
 @@ -356,7 +356,15 @@ static void piix4_reset(void *opaque)
-         /* Mark SMM as already inited (until KVM supports SMM). */
-         pci_conf[0x5B] = 0x02;
-     }
+     acpi_gpe_reset(&s->ar);
+     acpi_update_sci(&s->ar, s->irq);
+
 -    pm_io_space_update(s);
 +
 +    /*
@@ -89,9 +89,9 @@ PATCHES
 +     * by SeaBIOS at boot time.
 +     */
 +    /*pm_io_space_update(s);*/
-     acpi_pcihp_reset(&s->acpi_pci_hotplug);
+     acpi_pcihp_reset(&s->acpi_pci_hotplug, !s->use_acpi_root_pci_hotplug);
  }
- 
+
 --- a/hw/i386/xen/xen-hvm.c
 +++ b/hw/i386/xen/xen-hvm.c
 @@ -1521,6 +1521,15 @@ err:

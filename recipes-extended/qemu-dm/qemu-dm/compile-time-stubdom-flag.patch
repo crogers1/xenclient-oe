@@ -36,13 +36,13 @@ PATCHES
 --- a/configure
 +++ b/configure
 @@ -461,6 +461,7 @@ debug_stack_usage="no"
- crypto_afalg="no"
- seccomp=""
- glusterfs=""
+ gio="$default_feature"
+ skip_meson=no
+ slirp_smbd="$default_feature"
 +stubdom="no"
- glusterfs_xlator_opt="no"
- glusterfs_discard="no"
- glusterfs_fallocate="no"
+
+ # The following Meson options are handled manually (still they
+ # are included in the automatically generated help message)
 @@ -1403,6 +1404,10 @@ for opt do
    --enable-uuid|--disable-uuid)
        echo "$0: $opt is obsolete, UUID support is always built" >&2
@@ -51,17 +51,9 @@ PATCHES
 +  ;;
 +  --disable-openxt-stubdom) stubdom="no"
 +  ;;
-   --disable-gtk) gtk="no"
+   --tls-priority=*) tls_priority="$optarg"
    ;;
-   --enable-gtk) gtk="yes"
-@@ -6452,6 +6457,7 @@ echo "crypto afalg      $crypto_afalg"
- echo "GlusterFS support $glusterfs"
- echo "gcov              $gcov_tool"
- echo "gcov enabled      $gcov"
-+echo "OpenXT stubdomain support $stubdom"
- echo "TPM support       $tpm"
- echo "libssh support    $libssh"
- echo "QOM debugging     $qom_cast_debug"
+   --enable-rdma) rdma="yes"
 @@ -7165,6 +7171,10 @@ if test "$live_block_migration" = "yes"
    echo "CONFIG_LIVE_BLOCK_MIGRATION=y" >> $config_host_mak
  fi

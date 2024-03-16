@@ -11,14 +11,18 @@ DEPENDS = " \
     zlib \
     libcap-ng \
     pixman \
+    ninja-native \
+    meson-native \
+    bison-native \
+    glib-2.0 \
 "
 
-PV = "4.1.0"
+PV = "6.2.0"
 
 # Leave this in it's own definition so that it can be replaced with a local
 # tarball (the QEMU download speed is terrible). If this is combined with the
 # other patches, it doesn't seem to work
-SRC_URI = "http://wiki.qemu-project.org/download/qemu-${PV}.tar.bz2"
+SRC_URI = "https://download.qemu.org/qemu-${PV}.tar.bz2"
 
 # QEMU Patch Queue
 SRC_URI += "file://compile-time-stubdom-flag.patch \
@@ -39,14 +43,13 @@ SRC_URI += "file://compile-time-stubdom-flag.patch \
             file://write-acpi-state-to-xenstore.patch \
             file://set-blockdev-ro.patch \
             file://block-remove-unused-block-format-support.patch \
-            file://net-Remove-unused-network-options.patch \
             file://round-pci-region-sizes.patch \
-            file://ac97-compatibility.patch \
-            file://0001-vnc-stubs-Allow-vnc-none.patch \
+            file://openxt-apply-config-changes.patch \
+            file://config-disable.mak \
             "
 
-SRC_URI[md5sum] = "5862fc984bb955c4c24427d3bceddca5"
-SRC_URI[sha256sum] = "49f0de77410d4d0f7d0321ff2c2888b281381f06e1e2dac9ec4d061e3934f4ae"
+SRC_URI[md5sum] = "f276491d6821f81b1c405b7a0c3c851e"
+SRC_URI[sha256sum] = "2fde1a30a7dcc15dde0875319ecaf3dc249072dee46ba7ad1f7c8df1faece93f"
 
 S = "${WORKDIR}/qemu-${PV}"
 
@@ -66,14 +69,14 @@ INSANE_SKIP:${PN}-extra-roms = "arch"
 FILES:${PN}-utils = "/usr/libexec/* \
                      /usr/bin/qemu-pr-helper \
 "
-
+FILES:${PN}-icons = "/usr/share/icons/hicolor/*"
+PACKAGES += "${PN}-icons"
 PACKAGES += "${PN}-extra-keymaps ${PN}-extra-roms"
 PACKAGES =+ "${PN}-utils"
 
 EXTRA_OECONF += " \
     --target-list=i386-softmmu \
     --disable-auth-pam \
-    --disable-bluez \
     --disable-bochs \
     --disable-bzip2 \
     --disable-cap-ng \
@@ -83,7 +86,6 @@ EXTRA_OECONF += " \
     --disable-curses \
     --disable-dmg \
     --disable-docs \
-    --disable-fdt \
     --disable-gcrypt \
     --disable-gnutls \
     --disable-guest-agent \
@@ -102,7 +104,6 @@ EXTRA_OECONF += " \
     --disable-rdma \
     --disable-replication \
     --disable-sdl \
-    --disable-sheepdog \
     --disable-slirp \
     --disable-spice \
     --disable-strip \
@@ -128,6 +129,7 @@ EXTRA_OECONF += " \
     --enable-trace-backends=nop \
     --enable-werror \
     --enable-xen \
+    --enable-openxt-audio \
     --extra-cflags="${CFLAGS}" \
 "
 
@@ -140,97 +142,5 @@ EXTRA_OEMAKE += "AUTOCONF_HOST='--host=`arch`' DESTDIR=${D} STRIP=''"
 INC_PR = "r17"
 
 do_configure:append() {
-	sed -i -s '/^CONFIG_L2TPV3=y/d' config-host.mak
-}
-
-do_compile:prepend() {
-	rm -f i386-softmmu/config-devices.mak
-	oe_runmake i386-softmmu/config-devices.mak
-
-	dev_disable() {
-		sed -i -e 's/\('$1'=\).*$/\1n/' i386-softmmu/config-devices.mak
-	}
-
-	dev_disable CONFIG_VGA_ISA
-	dev_disable CONFIG_VGA_CIRRUS
-	dev_disable CONFIG_VMWARE_VGA
-	dev_disable CONFIG_VIRTIO_VGA
-	dev_disable CONFIG_VMMOUSE
-	dev_disable CONFIG_IPMI
-	dev_disable CONFIG_IPMI_LOCAL
-	dev_disable CONFIG_IPMI_EXTERN
-	dev_disable CONFIG_ISA_IPMI_KCS
-	dev_disable CONFIG_ISA_IPMI_BT
-	# SuperIO needs this
-	#dev_disable CONFIG_PARALLEL
-	dev_disable CONFIG_NE2000_ISA
-	dev_disable CONFIG_APPLESMC
-	#dev_disable CONFIG_PFLASH_CFI01
-	dev_disable CONFIG_WDT_IB700
-	dev_disable CONFIG_ISA_DEBUG
-	dev_disable CONFIG_ISA_TESTDEV
-	dev_disable CONFIG_VMPORT
-	dev_disable CONFIG_SGA
-	#dev_disable CONFIG_PVPANIC
-	#dev_disable CONFIG_NVDIMM
-	#dev_disable CONFIG_ACPI_NVDIMM
-	dev_disable CONFIG_XIO3130
-	dev_disable CONFIG_IOH3420
-	dev_disable CONFIG_I82801B11
-	dev_disable CONFIG_HYPERV_TESTDEV
-	dev_disable CONFIG_VIRTIO_PCI
-	dev_disable CONFIG_VIRTIO
-	dev_disable CONFIG_VIRTIO_9P
-	dev_disable CONFIG_VIRTIO_BALLOON
-	dev_disable CONFIG_VIRTIO_PMEM
-	dev_disable CONFIG_VIRTIO_PMEM_SUPPORTED
-	dev_disable CONFIG_VIRTIO_BLK
-	dev_disable CONFIG_VIRTIO_CRYPTO
-	dev_disable CONFIG_VIRTIO_GPU
-	dev_disable CONFIG_VIRTIO_INPUT
-	dev_disable CONFIG_VIRTIO_NET
-	dev_disable CONFIG_VIRTIO_RNG
-	dev_disable CONFIG_VIRTIO_SCSI
-	dev_disable CONFIG_VIRTIO_SERIAL
-	dev_disable CONFIG_VIRTIO_INPUT_HOST
-	dev_disable CONFIG_VFIO
-	dev_disable CONFIG_VFIO_PCI
-	dev_disable CONFIG_USB_OHCI
-	dev_disable CONFIG_USB_OHCI_PCI
-	# Things blow up without xhci
-	#dev_disable CONFIG_USB_XHCI
-	dev_disable CONFIG_NE2000_PCI
-	dev_disable CONFIG_EEPRO100_PCI
-	dev_disable CONFIG_PCNET_PCI
-	dev_disable CONFIG_PCNET_COMMON
-	dev_disable CONFIG_ES1370
-	dev_disable CONFIG_LSI_SCSI_PCI
-	dev_disable CONFIG_VMW_PVSCSI_SCSI_PCI
-	dev_disable CONFIG_MEGASAS_SCSI_PCI
-	dev_disable CONFIG_MPTSAS_SCSI_PCI
-	dev_disable CONFIG_VMXNET3_PCI
-	dev_disable CONFIG_ESP
-	dev_disable CONFIG_ESP_PCI
-	dev_disable CONFIG_IPACK
-	dev_disable CONFIG_WDT_IB6300ESB
-	dev_disable CONFIG_PCI_TESTDEV
-	dev_disable CONFIG_NVME_PCI
-	dev_disable CONFIG_SD
-	dev_disable CONFIG_SDHCI
-	dev_disable CONFIG_SDHCI_PCI
-	dev_disable CONFIG_EDU
-	dev_disable CONFIG_IVSHMEM
-	dev_disable CONFIG_ROCKER
-	dev_disable CONFIG_SB16
-	dev_disable CONFIG_ADLIB
-	dev_disable CONFIG_GUS
-	dev_disable CONFIG_CS4231A
-	dev_disable CONFIG_USB_STORAGE_BOT
-	dev_disable CONFIG_USB_STORAGE_UAS
-	dev_disable CONFIG_USB_STORAGE_MTP
-	dev_disable CONFIG_USB_SMARTCARD
-	dev_disable CONFIG_USB_AUDIO
-	dev_disable CONFIG_USB_SERIAL
-	dev_disable CONFIG_USB_NETWORK
-	dev_disable CONFIG_USB_BLUETOOTH
+	sed -i -s '/^CONFIG_L2TPV3=y/d' ${S}/build/config-host.mak
 }

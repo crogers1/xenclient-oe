@@ -45,9 +45,9 @@ PATCHES
  atapipt="no"
  atapiptargo="no"
 +xenpt_hide_msix="yes"
- glusterfs_xlator_opt="no"
- glusterfs_discard="no"
- glusterfs_fallocate="no"
+
+ # The following Meson options are handled manually (still they
+ # are included in the automatically generated help message)
 @@ -1425,6 +1426,10 @@ for opt do
    ;;
    --disable-openxt-stubdom) stubdom="no"
@@ -56,17 +56,9 @@ PATCHES
 +  ;;
 +  --disable-xenpt-msix) xenpt_hide_msix="yes"
 +  ;;
-   --disable-gtk) gtk="no"
+   --tls-priority=*) tls_priority="$optarg"
    ;;
-   --enable-gtk) gtk="yes"
-@@ -6488,6 +6493,7 @@ echo "gcov enabled      $gcov"
- echo "OpenXT stubdomain support $stubdom"
- echo "ATAPI PT support  $atapipt"
- echo "ATAPI PT Argo support  $atapiptargo"
-+echo "Hide MSI-X cap with Xen PCI pass through $xenpt_hide_msix"
- echo "TPM support       $tpm"
- echo "libssh support    $libssh"
- echo "QOM debugging     $qom_cast_debug"
+   --enable-rdma) rdma="yes"
 @@ -7217,6 +7223,10 @@ if test "$atapiptargo" = "yes" ; then
    echo "CONFIG_ATAPI_PT_ARGO=y" >> $config_host_mak
  fi

@@ -1,10 +1,10 @@
---- a/chardev/Makefile.objs
-+++ b/chardev/Makefile.objs
-@@ -23,3 +23,4 @@ baum.o-cflags := $(SDL_CFLAGS)
- baum.o-libs := $(BRLAPI_LIBS)
- 
- common-obj-$(CONFIG_SPICE) += spice.o
-+chardev-obj-$(CONFIG_XEN) += char-argo.o
+#--- a/chardev/Makefile.objs
+#+++ b/chardev/Makefile.objs
+#@@ -23,3 +23,4 @@ baum.o-cflags := $(SDL_CFLAGS)
+# baum.o-libs := $(BRLAPI_LIBS)
+# 
+# common-obj-$(CONFIG_SPICE) += spice.o
+#+chardev-obj-$(CONFIG_XEN) += char-argo.o
 --- /dev/null
 +++ b/chardev/char-argo.c
 @@ -0,0 +1,356 @@
@@ -366,7 +366,7 @@
 +type_init(register_types);
 --- a/chardev/char.c
 +++ b/chardev/char.c
-@@ -379,6 +379,7 @@ QemuOpts *qemu_chr_parse_compat(const ch
+@@ -374,6 +374,7 @@ QemuOpts *qemu_chr_parse_compat(const ch
          strcmp(filename, "msmouse") == 0 ||
          strcmp(filename, "wctablet") == 0 ||
          strcmp(filename, "braille") == 0 ||
@@ -374,7 +374,7 @@
          strcmp(filename, "testdev") == 0 ||
          strcmp(filename, "stdio")   == 0) {
          qemu_opt_set(opts, "backend", filename, &error_abort);
-@@ -874,6 +875,12 @@ QemuOptsList qemu_chardev_opts = {
+@@ -875,6 +876,12 @@ QemuOptsList qemu_chardev_opts = {
              .name = "reconnect",
              .type = QEMU_OPT_NUMBER,
          },{
@@ -389,7 +389,7 @@
          },{
 --- a/include/chardev/char.h
 +++ b/include/chardev/char.h
-@@ -245,6 +245,7 @@ int qemu_chr_wait_connected(Chardev *chr
+@@ -243,6 +243,7 @@ OBJECT_DECLARE_TYPE(Chardev, ChardevClas
  #define TYPE_CHARDEV_SERIAL "chardev-serial"
  #define TYPE_CHARDEV_SOCKET "chardev-socket"
  #define TYPE_CHARDEV_UDP "chardev-udp"
@@ -399,7 +399,7 @@
      object_dynamic_cast(OBJECT(chr), TYPE_CHARDEV_RINGBUF)
 --- a/qapi/char.json
 +++ b/qapi/char.json
-@@ -299,6 +299,24 @@
+@@ -303,6 +303,33 @@
    'base': 'ChardevCommon' }
  
  ##
@@ -421,24 +421,41 @@
 +  'base': 'ChardevCommon' }
 +
 +##
++# @ChardevArgoWrapper:
++#
++# Since: openxt
++##
++{ 'struct': 'ChardevArgoWrapper',
++  'data': { 'data': 'ChardevArgo' } }
++
++
++##
  # @ChardevMux:
  #
  # Configuration info for mux chardevs.
-@@ -415,6 +433,7 @@
-             'spiceport': { 'type': 'ChardevSpicePort',
-                            'if': 'defined(CONFIG_SPICE)' },
-             'vc': 'ChardevVC',
-+            'argo': 'ChardevArgo',
-             'ringbuf': 'ChardevRingbuf',
+@@ -448,6 +475,7 @@
+             { 'name': 'spiceport', 'if': 'CONFIG_SPICE' },
+             { 'name': 'qemu-vdagent', 'if': 'CONFIG_SPICE_PROTOCOL' },
+             'vc',
++	    'argo',
+             'ringbuf',
              # next one is just for compatibility
-             'memory': 'ChardevRingbuf' } }
+             'memory' ] }
+@@ -583,6 +611,7 @@
+             'qemu-vdagent': { 'type': 'ChardevQemuVDAgentWrapper',
+                               'if': 'CONFIG_SPICE_PROTOCOL' },
+             'vc': 'ChardevVCWrapper',
++            'argo': 'ChardevArgoWrapper',
+             'ringbuf': 'ChardevRingbufWrapper',
+             # next one is just for compatibility
+             'memory': 'ChardevRingbufWrapper' } }
 --- a/qemu-options.hx
 +++ b/qemu-options.hx
-@@ -2741,6 +2741,10 @@ DEF("chardev", HAS_ARG, QEMU_OPTION_char
+@@ -3238,6 +3238,10 @@ DEF("chardev", HAS_ARG, QEMU_OPTION_char
      "-chardev parallel,id=id,path=path[,mux=on|off][,logfile=PATH][,logappend=on|off]\n"
      "-chardev parport,id=id,path=path[,mux=on|off][,logfile=PATH][,logappend=on|off]\n"
  #endif
-+#if defined(CONFIG_XEN)
++#if defined(__linux__)
 +    "-chardev argo,id=id[,port=5100][,domid=0][,localport=15100][,stream=on|off]\n"
 +    "         [,logfile=PATH][,logappend=on|off]\n"
 +#endif

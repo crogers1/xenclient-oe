@@ -11,8 +11,8 @@ OXT-1068
 
 Signed-off-by: Chris Rogers <rogersc@ainfosec.com>
 
---- a/blockdev.c
-+++ b/blockdev.c
+--- a/block/qapi-sysemu.c
++++ b/block/qapi-sysemu.c
 @@ -2666,6 +2666,7 @@ void qmp_blockdev_change_medium(bool has
  
      switch (read_only) {
