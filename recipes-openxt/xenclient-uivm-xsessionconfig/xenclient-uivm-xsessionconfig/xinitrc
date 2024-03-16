@@ -124,6 +124,7 @@ fi
 xfwm4 &
 xfsettingsd --no-daemon --replace &
 sleep 1 # Because proper behaviour no longer matter.
+WEBKIT_DISABLE_COMPOSITING_MODE=1 \
 INET_IS_ARGO=1 \
 LD_PRELOAD=/usr/lib/libargo-1.0.so.0 \
   surf -bdFgKnp 1.0.0.0 &
