@@ -1,0 +1,11 @@
+--- a/fontutils.c
++++ b/fontutils.c
+@@ -4271,8 +4271,6 @@ findXftGlyph(XtermWidget xw, XftFont *gi
+ 		    }
+ #endif
+ 		    if (foundXftGlyph(xw, check, wc)) {
+-	    (void) added;
+-	    (void) actual;
+ 			markXftOpened(xw, which, n, wc);
+ 			reportXftFonts(xw, check, "fallback", tag, myReport);
+ 			result = check;

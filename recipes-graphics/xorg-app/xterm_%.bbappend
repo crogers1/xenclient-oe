@@ -1,5 +1,8 @@
 # Enable TrueType fonts
 PACKAGECONFIG += "xft"
+FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
+
+SRC_URI += "file://remove-voids.patch"
 
 do_configure:prepend() {
 	echo >> ${S}/XTerm.ad
