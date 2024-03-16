@@ -1,8 +1,8 @@
 --- a/policy/modules/system/init.fc
 +++ b/policy/modules/system/init.fc
-@@ -77,6 +77,10 @@ ifdef(`distro_debian',`
- /etc/network/if-down\.d/.* --	gen_context(system_u:object_r:initrc_exec_t,s0)
+@@ -81,6 +81,10 @@ ifdef(`distro_debian',`
  /etc/network/if-post-down\.d/.* -- gen_context(system_u:object_r:initrc_exec_t,s0)
+ ')
  
 +#
 +# /config
@@ -10,8 +10,8 @@
 +/config/rehash-vms	--	gen_context(system_u:object_r:init_flag_t,s0)
  ifdef(`distro_gentoo', `
  /var/lib/init\.d(/.*)?		gen_context(system_u:object_r:initrc_state_t,s0)
- /run/svscan\.pid	--	gen_context(system_u:object_r:initrc_runtime_t,s0)
-@@ -89,3 +93,9 @@ ifdef(`distro_suse', `
+ /var/lib/ip6?tables(/.*)?	gen_context(system_u:object_r:initrc_tmp_t,s0)
+@@ -96,3 +100,9 @@ ifdef(`distro_suse', `
  /run/setleds-on	--	gen_context(system_u:object_r:initrc_runtime_t,s0)
  /run/sysconfig(/.*)?	gen_context(system_u:object_r:initrc_runtime_t,s0)
  ')
@@ -23,7 +23,7 @@
 +/usr/sbin/init\.root-ro	--	gen_context(system_u:object_r:init_exec_t,s0)
 --- a/policy/modules/system/init.if
 +++ b/policy/modules/system/init.if
-@@ -3599,3 +3599,39 @@ interface(`init_getrlimit',`
+@@ -3603,3 +3603,39 @@ interface(`init_getrlimit',`
  
  	allow $1 init_t:process getrlimit;
  ')
@@ -65,7 +65,7 @@
 +')
 --- a/policy/modules/system/init.te
 +++ b/policy/modules/system/init.te
-@@ -104,6 +104,13 @@ files_lock_file(initrc_lock_t)
+@@ -117,6 +117,13 @@ files_tmpfs_file(init_tmpfs_t)
  
  type initrc_var_log_t;
  logging_log_file(initrc_var_log_t)
@@ -77,18 +77,18 @@
 +
 +allow init_t init_flag_t:file manage_file_perms;
  
- type initrc_state_t;
- files_type(initrc_state_t)
-@@ -165,6 +172,8 @@ files_runtime_filetrans(init_t, initctl_
- # Modify utmp.
- allow init_t initrc_runtime_t:file { rw_file_perms setattr };
+ type systemd_unit_t;
+ init_unit_file(systemd_unit_t)
+@@ -176,6 +183,8 @@ allow init_t initrc_runtime_t:file { rw_
+ allow init_t init_tmpfs_t:file manage_file_perms;
+ fs_tmpfs_filetrans(init_t, init_tmpfs_t, file)
  
 +auth_read_login_records(init_t)
 +
  kernel_read_system_state(init_t)
  kernel_share_state(init_t)
  kernel_dontaudit_search_unlabeled(init_t)
-@@ -669,6 +678,9 @@ files_runtime_filetrans_lock_dir(initrc_
+@@ -706,6 +715,9 @@ files_runtime_filetrans_lock_dir(initrc_
  files_read_kernel_symbol_table(initrc_t)
  files_setattr_lock_dirs(initrc_t)
  
@@ -98,7 +98,7 @@
  corecmd_exec_all_executables(initrc_t)
  
  corenet_all_recvfrom_netlabel(initrc_t)
-@@ -726,6 +738,9 @@ files_getattr_all_files(initrc_t)
+@@ -763,6 +775,9 @@ files_getattr_all_files(initrc_t)
  files_getattr_all_symlinks(initrc_t)
  files_getattr_all_pipes(initrc_t)
  files_getattr_all_sockets(initrc_t)
@@ -106,9 +106,9 @@
 +files_setattr_all_pid_dirs(initrc_t)
 +files_setattr_all_pids(initrc_t)
  files_purge_tmp(initrc_t)
- files_manage_all_locks(initrc_t)
  files_manage_boot_files(initrc_t)
-@@ -736,7 +751,7 @@ files_delete_all_runtime_files(initrc_t)
+ files_read_all_runtime_files(initrc_t)
+@@ -772,7 +787,7 @@ files_delete_all_runtime_files(initrc_t)
  files_delete_all_runtime_dirs(initrc_t)
  files_delete_all_runtime_sockets(initrc_t)
  files_delete_all_runtime_pipes(initrc_t)
@@ -117,7 +117,7 @@
  files_manage_etc_runtime_files(initrc_t)
  files_etc_filetrans_etc_runtime(initrc_t, file)
  files_exec_etc_files(initrc_t)
-@@ -793,6 +808,7 @@ auth_rw_login_records(initrc_t)
+@@ -822,6 +837,7 @@ auth_rw_login_records(initrc_t)
  auth_setattr_login_records(initrc_t)
  auth_rw_lastlog(initrc_t)
  auth_read_pam_runtime_files(initrc_t)
@@ -125,7 +125,7 @@
  auth_delete_pam_runtime_files(initrc_t)
  auth_delete_pam_console_data(initrc_t)
  auth_use_nsswitch(initrc_t)
-@@ -825,13 +841,30 @@ userdom_read_user_home_content_files(ini
+@@ -854,13 +870,26 @@ userdom_read_user_home_content_files(ini
  # started from init should be placed in their own domain.
  userdom_use_inherited_user_terminals(initrc_t)
  
@@ -135,10 +135,6 @@
 +files_manage_var_dirs(initrc_t)
 +files_create_etc_runtime(initrc_t, "ifstate.new")
 +
-+optional_policy(`
-+	hal_setattr_cache_dirs(initrc_t)
-+	hal_setattr_pid_dirs(initrc_t)
-+')
 +sysnet_setattr_config(initrc_t)
 +sysnet_write_config(initrc_t)
 +
@@ -156,7 +152,7 @@
  	# for storing state under /dev/shm
  	fs_setattr_tmpfs_dirs(initrc_t)
  	storage_manage_fixed_disk(initrc_t)
-@@ -852,6 +885,12 @@ ifdef(`distro_debian',`
+@@ -881,6 +910,12 @@ ifdef(`distro_debian',`
  	')
  ')
  
@@ -169,7 +165,7 @@
  ifdef(`distro_gentoo',`
  	kernel_dontaudit_getattr_core_if(initrc_t)
  
-@@ -1142,6 +1181,7 @@ optional_policy(`
+@@ -1176,6 +1211,7 @@ optional_policy(`
  	dbus_system_bus_client(initrc_t)
  	dbus_read_config(initrc_t)
  	dbus_manage_lib_files(initrc_t)
@@ -177,7 +173,7 @@
  
  	init_dbus_chat(initrc_t)
  
-@@ -1160,6 +1200,10 @@ optional_policy(`
+@@ -1189,6 +1225,10 @@ optional_policy(`
  ')
  
  optional_policy(`
@@ -188,7 +184,7 @@
  	# /var/run/dovecot/login/ssl-parameters.dat is a hard link to
  	# /var/lib/dovecot/ssl-parameters.dat and init tries to clean up
  	# the directory. But we do not want to allow this.
-@@ -1191,6 +1235,10 @@ optional_policy(`
+@@ -1213,6 +1253,10 @@ optional_policy(`
  ')
  
  optional_policy(`
@@ -199,7 +195,7 @@
  	ipsec_read_config(initrc_t)
  	ipsec_manage_runtime_files(initrc_t)
  ')
-@@ -1358,6 +1406,11 @@ optional_policy(`
+@@ -1381,6 +1425,11 @@ optional_policy(`
  ')
  
  optional_policy(`
@@ -211,7 +207,7 @@
  	udev_manage_runtime_files(initrc_t)
  	udev_manage_runtime_dirs(initrc_t)
  	udev_manage_rules_files(initrc_t)
-@@ -1397,6 +1450,10 @@ optional_policy(`
+@@ -1420,6 +1469,10 @@ optional_policy(`
  ')
  
  optional_policy(`

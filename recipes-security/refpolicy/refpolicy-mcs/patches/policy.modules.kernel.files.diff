@@ -59,9 +59,9 @@
  	allow $1 mountpoint:dir { search_dir_perms mounton };
  	allow $1 mountpoint:file { getattr mounton };
 +	allow $1 mountpoint:dir write;
+
+	kernel_mounton_unlabeled_dirs($1)
  ')
- 
- ########################################
 @@ -2773,6 +2775,25 @@ interface(`files_read_default_symlinks',
  
  ########################################

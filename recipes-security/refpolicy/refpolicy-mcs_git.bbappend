@@ -5,6 +5,7 @@ SRC_URI += " \
     file://policy/modules-upstream.conf \
     file://policy/modules-openxt.conf \
 "
+RPROVIDES:${PN} = "refpolicy-mcs"
 # Openxt additional modules.
 SRC_URI += " \
     file://policy/modules/admin/statusreport.fc \
@@ -94,7 +95,6 @@ SRC_URI += " \
 "
 # Patches.
 SRC_URI += " \
-    file://patches/0001-udev-allow-udev_t-to-watch-udev_rules_t-dir.patch \
     file://patches/fc-subs-config-aliases.patch \
     file://patches/policy.modules.admin.alsa.diff \
     file://patches/policy.modules.admin.brctl.diff \
@@ -115,7 +115,6 @@ SRC_URI += " \
     file://patches/policy.modules.services.cron.diff \
     file://patches/policy.modules.services.dbus.diff \
     file://patches/policy.modules.services.dnsmasq.diff \
-    file://patches/policy.modules.services.hal.diff \
     file://patches/policy.modules.services.networkmanager.diff \
     file://patches/policy.modules.services.ssh.diff \
     file://patches/policy.modules.services.virt.diff \
@@ -162,8 +161,8 @@ SRC_URI += " \
     file://patches/policy.modules.admin.su.patch \
     file://patches/signed-kernel-modprobe.patch \
     file://patches/add-missing-dbusd-permissions.patch \
-    file://patches/xl-sysadm-interfaces.patch \
     file://patches/policy.modules.admin.bootloader.diff \
+    file://patches/xl-sysadm-interfaces.patch \
     file://patches/monit-volatiles.patch \
     file://patches/xenstore-labeling.patch \
     file://patches/xen-privcmd.patch \

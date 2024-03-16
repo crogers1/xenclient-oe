@@ -173,9 +173,9 @@
  	xserver_link_xdm_keys(sshd_t)
  ')
 @@ -378,3 +391,8 @@ optional_policy(`
- optional_policy(`
- 	udev_read_db(ssh_keygen_t)
+	seutil_sigchld_newrole(ssh_keygen_t)
  ')
+
 +
 +# XC: ssh_keygen_t makes and stores keys in /config/ssh
 +optional_policy(`
