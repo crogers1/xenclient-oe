@@ -77,6 +77,7 @@ post_rootfs_shell_commands() {
     # Trick to resolve dom0 name with argo.
     echo '1.0.0.0 dom0' >> ${IMAGE_ROOTFS}/etc/hosts;
 
+    ln -sfr ${IMAGE_ROOTFS}/usr/lib/ghc-8.10.7/rts/libffi.so ${IMAGE_ROOTFS}/usr/lib/libffi.so.7
     # NDVM doesn't have a /dev/tty1, disable the login shell on it
     sed -i 's/[^#].*getty.*tty1$/#&/' ${IMAGE_ROOTFS}/etc/inittab ;
 }
