@@ -35,7 +35,7 @@ PATCHES
 @@ -163,17 +163,6 @@ static int libxl__device_disk_setdefault
      rc = libxl__resolve_domid(gc, disk->backend_domname, &disk->backend_domid);
      if (rc < 0) return rc;
- 
+
 -    /* Force Qdisk backend for CDROM devices of guests with a device model. */
 -    if (disk->is_cdrom != 0 &&
 -        libxl__domain_type(gc, domid) == LIBXL_DOMAIN_TYPE_HVM) {

@@ -29,7 +29,7 @@ Signed-off-by: Tamas K Lengyel <lengyelt@ainfosec.com>
  struct _EFI_APPLE_PROPERTIES;
 @@ -1265,7 +1274,7 @@ void EFIAPI __init noreturn efi_start(EF
      unsigned int i, argc;
-     CHAR16 **argv, *file_name, *cfg_file_name = L"openxt.cfg", *options = NULL;
+     CHAR16 **argv, *file_name, *options = NULL, *cfg_file_name = (CHAR16*) L"openxt.cfg";
      UINTN gop_mode = ~0;
 -    EFI_SHIM_LOCK_PROTOCOL *shim_lock;
 +    EFI_SHIM_LOCK_PROTOCOL *shim_lock = NULL;
@@ -81,7 +81,7 @@ Signed-off-by: Tamas K Lengyel <lengyelt@ainfosec.com>
              }
          }
  
-@@ -1526,11 +1552,22 @@ void EFIAPI __init noreturn efi_start(EF
+@@ -1513,11 +1539,22 @@ void EFIAPI __init noreturn efi_start(EF
       * device tree through the efi_check_dt_boot function, in this stage
       * verify it.
       */
@@ -122,7 +122,7 @@ Signed-off-by: Tamas K Lengyel <lengyelt@ainfosec.com>
 +    UINTN DataSize = sizeof(SecureBoot);
 +    EFI_STATUS efi_status;
 +
-+    efi_status = efi_rs->GetVariable(L"SecureBoot", &efi_gv, NULL,
++    efi_status = efi_rs->GetVariable((CHAR16 *) L"SecureBoot", &efi_gv, NULL,
 +                                     &DataSize, &SecureBoot);
 +    if ( EFI_ERROR(efi_status) )
 +        return false;
@@ -130,7 +130,7 @@ Signed-off-by: Tamas K Lengyel <lengyelt@ainfosec.com>
 +    if ( !SecureBoot )
 +        return false;
 +
-+    efi_status = efi_rs->GetVariable(L"SetupMode", &efi_gv, NULL,
++    efi_status = efi_rs->GetVariable((CHAR16 *) L"SetupMode", &efi_gv, NULL,
 +                                     &DataSize, &SetupMode);
 +    if ( EFI_ERROR(efi_status) )
 +        return false;

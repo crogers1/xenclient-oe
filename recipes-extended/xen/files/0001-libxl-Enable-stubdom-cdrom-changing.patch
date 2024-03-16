@@ -480,25 +480,6 @@ Signed-off-by: Jason Andryuk <jandryuk@gmail.com>
  
      device_add_domain_config(gc, &d_config, &libxl__disk_devtype,
                               &cis->disk_saved);
-@@ -1020,10 +1252,14 @@ static void cdrom_insert_inserted(libxl_
-     flexarray_append_pair(insert, "type",
-                       libxl__device_disk_string_of_backend(disk->backend));
-     if (disk->format != LIBXL_DISK_FORMAT_EMPTY)
--        flexarray_append_pair(insert, "params",
--                    GCSPRINTF("%s:%s",
--                        libxl__device_disk_string_of_format(disk->format),
--                        disk->pdev_path));
-+        if (disk->backend == LIBXL_DISK_BACKEND_QDISK) {
-+            flexarray_append_pair(insert, "params",
-+                        GCSPRINTF("%s:%s",
-+                            libxl__device_disk_string_of_format(disk->format),
-+                            disk->pdev_path));
-+        } else {
-+            flexarray_append_pair(insert, "params", disk->pdev_path);
-+        }
-     else
-         flexarray_append_pair(insert, "params", "");
- 
 @@ -1081,7 +1317,10 @@ static void cdrom_insert_done(libxl__egc
  {
      EGC_GC;

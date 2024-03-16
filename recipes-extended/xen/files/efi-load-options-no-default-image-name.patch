@@ -2,7 +2,7 @@
 +++ b/xen/arch/x86/efi/efi-boot.h
 @@ -760,10 +760,8 @@ static void __init efi_arch_handle_cmdli
      {
-         name.w = image_name;
+         name.w = cmdline_options;
          w2s(&name);
 +        place_string(&mbi.cmdline, name.s);
      }

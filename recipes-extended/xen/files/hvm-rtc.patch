@@ -44,12 +44,11 @@ PATCHES
 
 --- a/xen/arch/x86/acpi/power.c
 +++ b/xen/arch/x86/acpi/power.c
-@@ -158,8 +158,11 @@ static void thaw_domains(void)
-     scheduler_enable();
+@@ -161,7 +161,11 @@ static void thaw_domains(void)
  
      rcu_read_lock(&domlist_read_lock);
--    for_each_domain ( d )
-+    for_each_domain ( d ) {
+     for_each_domain ( d )
++    {
 +        if ( is_hvm_domain(d) )
 +            rtc_update_clock(d);
          domain_unpause(d);

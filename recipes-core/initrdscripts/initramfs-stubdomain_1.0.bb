@@ -23,7 +23,7 @@ FILES:${PN} = " \
 "
 RDEPENDS:${PN} += " \
     qemu-dm-stubdom \
-    vchan-socket-proxy \
+    xen-tools-vchan \
     xen-tools-xenstore \
     add-fd \
     busybox-mdev \

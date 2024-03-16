@@ -30,7 +30,7 @@ PATCHES
 ################################################################################
 --- a/xen/arch/x86/boot/reloc.c
 +++ b/xen/arch/x86/boot/reloc.c
-@@ -175,7 +175,8 @@ static multiboot_info_t *mbi_reloc(u32 m
+@@ -176,7 +176,8 @@ static multiboot_info_t *mbi_reloc(u32 m
                         MBI_CMDLINE |
                         MBI_MODULES |
                         MBI_MEMMAP |
@@ -42,17 +42,17 @@ PATCHES
  }
 --- a/xen/arch/x86/setup.c
 +++ b/xen/arch/x86/setup.c
-@@ -142,6 +142,9 @@ static int __init cf_check parse_cet(con
+@@ -143,6 +143,9 @@ static int __init cf_check parse_cet(con
  }
  custom_param("cet", parse_cet);
  
-+static bool_t __initdata mbi_video;
++static bool __initdata mbi_video;
 +boolean_param("mbi-video", mbi_video);
 +
  cpumask_t __read_mostly cpu_present_map;
  
  unsigned long __read_mostly xen_phys_start;
-@@ -647,7 +650,7 @@ static struct e820map __initdata boot_e8
+@@ -649,7 +652,7 @@ static struct e820map __initdata boot_e8
  extern struct boot_video_info boot_vid_info;
  #endif
  
@@ -61,7 +61,7 @@ PATCHES
  {
  #ifdef CONFIG_VIDEO
      struct boot_video_info *bvi = &bootsym(boot_vid_info);
-@@ -656,6 +659,30 @@ static void __init parse_video_info(void
+@@ -658,6 +661,30 @@ static void __init parse_video_info(void
      if ( efi_enabled(EFI_BOOT) )
          return;
  
@@ -92,7 +92,7 @@ PATCHES
      if ( (bvi->orig_video_isVGA == 1) && (bvi->orig_video_mode == 3) )
      {
          vga_console_info.video_type = XEN_VGATYPE_TEXT_MODE_3;
-@@ -1053,7 +1080,7 @@ void __init noreturn __start_xen(unsigne
+@@ -1061,7 +1088,7 @@ void asmlinkage __init noreturn __start_
       */
      hypervisor_name = hypervisor_probe();
  
