@@ -1,12 +1,14 @@
 DESCRIPTION = "Basic grub.cfg for PVH/PV domains"
 LICENSE = "GPLv2"
 LIC_FILES_CHKSUM = " \
-    file://${COMMON_LICENSE_DIR}/GPL-2.0;md5=801f80980d171dd6425610833a22dbe6 \
+    file://${COMMON_LICENSE_DIR}/GPL-2.0-only;md5=801f80980d171dd6425610833a22dbe6 \
 "
 
 APPEND ??= "root=/dev/xvda1 ro console=hvc0"
 # Make sure the package is machine specific since it uses APPEND
 PACKAGE_ARCH = "${MACHINE_ARCH}"
+
+FILES:${PN} += "/boot/*"
 
 do_install() {
     install -d "${D}/boot/grub2"
@@ -17,5 +19,3 @@ do_install() {
     echo "linux /boot/${KERNEL_IMAGETYPE} ${APPEND}" >> "${D}/boot/grub2/grub.cfg"
     echo "}" >> "${D}/boot/grub2/grub.cfg"
 }
-
-FILES_${PN} = "/boot"
