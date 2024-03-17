@@ -1,0 +1,202 @@
+#OpenXT:Update resolv.conf for different interfaces as dnsmasq script running on different bridges makes use of it.
+#       resolv.conf for different interfaces is done by appending the interface name to 'resolv.conf.' file.
+#       For example: resolv.conf for interface wlan0 would be resolv.conf.wlan0
+--- a/src/core/dns/nm-dns-manager.c
++++ b/src/core/dns/nm-dns-manager.c
+@@ -126,6 +126,10 @@ struct _NMDnsManagerClass {
+     NMDBusObjectClass parent;
+ };
+ 
++#ifndef RESOLV_CONF
++#define RESOLV_CONF "/var/volatile/etc/resolv.conf"
++#endif
++
+ G_DEFINE_TYPE(NMDnsManager, nm_dns_manager, NM_TYPE_DBUS_OBJECT)
+ 
+ #define NM_DNS_MANAGER_GET_PRIVATE(self) _NM_GET_PRIVATE(self, NMDnsManager, NM_IS_DNS_MANAGER)
+@@ -899,6 +903,7 @@ update_resolv_conf_no_stub(NMDnsManager
+ 
+ static SpawnResult
+ update_resolv_conf(NMDnsManager                 *self,
++                   const char *const            *resolv_path,
+                    const char *const            *searches,
+                    const char *const            *nameservers,
+                    const char *const            *options,
+@@ -917,25 +922,25 @@ update_resolv_conf(NMDnsManager
+ 
+     if (rc_manager == NM_DNS_MANAGER_RESOLV_CONF_MAN_FILE
+         || (rc_manager == NM_DNS_MANAGER_RESOLV_CONF_MAN_SYMLINK
+-            && !_read_link_cached(_PATH_RESCONF, &resconf_link_cached, &resconf_link))) {
++            && !_read_link_cached(resolv_path, &resconf_link_cached, &resconf_link))) {
+         gs_free char      *rc_path_syml = NULL;
+         nm_auto_free char *rc_path_real = NULL;
+-        const char        *rc_path      = _PATH_RESCONF;
++        const char        *rc_path      = resolv_path;
+         GError            *local        = NULL;
+ 
+         if (rc_manager == NM_DNS_MANAGER_RESOLV_CONF_MAN_FILE) {
+-            rc_path_real = realpath(_PATH_RESCONF, NULL);
++            rc_path_real = realpath(resolv_path, NULL);
+             if (rc_path_real)
+                 rc_path = rc_path_real;
+             else {
+                 /* realpath did not resolve a path-name. That either means,
+-                 * _PATH_RESCONF:
++                 * resolv_path:
+                  *   - does not exist
+                  *   - is a plain file
+                  *   - is a dangling symlink
+                  *
+                  * Handle the case, where it is a dangling symlink... */
+-                rc_path_syml = nm_utils_read_link_absolute(_PATH_RESCONF, NULL);
++                rc_path_syml = nm_utils_read_link_absolute(resolv_path, NULL);
+                 if (rc_path_syml)
+                     rc_path = rc_path_syml;
+             }
+@@ -959,6 +964,7 @@ update_resolv_conf(NMDnsManager
+                   rc_path,
+                   _rc_manager_to_string(rc_manager));
+         }
++        return write_file_result;
+     }
+ 
+     if ((f = fopen(MY_RESOLV_CONF_TMP, "we")) == NULL) {
+@@ -1779,11 +1785,12 @@ plugin_skip:;
+         case NM_DNS_MANAGER_RESOLV_CONF_MAN_SYMLINK:
+         case NM_DNS_MANAGER_RESOLV_CONF_MAN_FILE:
+             result              = update_resolv_conf(self,
++                                        MY_RESOLV_CONF,
+                                         NM_CAST_STRV_CC(searches),
+                                         NM_CAST_STRV_CC(nameservers),
+                                         NM_CAST_STRV_CC(options),
+                                         p_local_error,
+-                                        priv->rc_manager);
++                                        NM_DNS_MANAGER_RESOLV_CONF_MAN_FILE);
+             resolv_conf_updated = TRUE;
+             /* If we have ended with no nameservers avoid updating again resolv.conf
+              * on stop, as some external changes may be applied to it in the meanwhile */
+@@ -1809,11 +1816,12 @@ plugin_skip:;
+             _LOGD("update-dns: program not available, writing to resolv.conf");
+             g_clear_error(&local_error);
+             result              = update_resolv_conf(self,
++                                        MY_RESOLV_CONF,
+                                         NM_CAST_STRV_CC(searches),
+                                         NM_CAST_STRV_CC(nameservers),
+                                         NM_CAST_STRV_CC(options),
+                                         p_local_error,
+-                                        NM_DNS_MANAGER_RESOLV_CONF_MAN_SYMLINK);
++                                        NM_DNS_MANAGER_RESOLV_CONF_MAN_FILE);
+             resolv_conf_updated = TRUE;
+         }
+     }
+@@ -1822,6 +1830,7 @@ plugin_skip:;
+      * ignoring any errors */
+     if (!resolv_conf_updated) {
+         update_resolv_conf(self,
++                           MY_RESOLV_CONF,
+                            NM_CAST_STRV_CC(searches),
+                            NM_CAST_STRV_CC(nameservers),
+                            NM_CAST_STRV_CC(options),
+@@ -1849,6 +1858,71 @@ plugin_skip:;
+ /*****************************************************************************/
+ 
+ gboolean
++xc_rewrite_resolv_conf (NMDnsManager *self,
++                        NMDnsConfigIPData *ip_data,
++                        GError **error)
++{
++    NMResolvConfData rc;
++    const char *nis_domain = NULL;
++    gs_strfreev char **searches = NULL;
++    gs_strfreev char **nameservers = NULL;
++    gs_strfreev char **nis_servers = NULL;
++    gs_strfreev char **options = NULL;
++    int num, i, len;
++    SpawnResult success;
++    char resolv_path[PATH_MAX];
++    const char *iface;
++
++    rc.nameservers = g_ptr_array_new ();
++    rc.searches = g_ptr_array_new ();
++    rc.options = g_ptr_array_new ();
++    rc.nis_domain = NULL;
++    rc.nis_servers = g_ptr_array_new ();
++
++    if (ip_data)
++        merge_one_l3cd (&rc, ip_data->addr_family, ip_data->data->ifindex, ip_data->l3cd);
++
++    if (rc.searches->len)
++        searches = _ptrarray_to_strv (rc.searches);
++    else
++        g_ptr_array_free (rc.searches, TRUE);
++
++    if (rc.nameservers->len)
++        nameservers = _ptrarray_to_strv (rc.nameservers);
++    else
++        g_ptr_array_free (rc.nameservers, TRUE);
++
++    if (rc.nis_servers->len)
++        nis_servers = _ptrarray_to_strv (rc.nis_servers);
++    else
++        g_ptr_array_free (rc.nis_servers, TRUE);
++
++    if (rc.options->len)
++        options = _ptrarray_to_strv (rc.options);
++    else
++        g_ptr_array_free (rc.options, TRUE);
++
++    nis_domain = rc.nis_domain;
++
++
++    iface = nm_platform_link_get_name(NM_PLATFORM_GET, ip_data->data->ifindex);
++
++    strcpy(resolv_path, RESOLV_CONF);
++    strcat(resolv_path, ".");
++    strcat(resolv_path, iface);
++
++    success = update_resolv_conf (self,
++                                  resolv_path,
++                                  NM_CAST_STRV_CC (searches),
++                                  NM_CAST_STRV_CC (nameservers),
++                                  NM_CAST_STRV_CC (options),
++                                  error,
++                                  NM_DNS_MANAGER_RESOLV_CONF_MAN_FILE);
++
++    return success == SR_SUCCESS;
++}
++
++gboolean
+ nm_dns_manager_set_ip_config(NMDnsManager         *self,
+                              int                   addr_family,
+                              gconstpointer         source_tag,
+@@ -1859,6 +1933,7 @@ nm_dns_manager_set_ip_config(NMDnsManage
+     NMDnsManagerPrivate *priv;
+     NMDnsConfigData     *data;
+     int                  ifindex;
++    const char *iface;
+     gboolean             changed = FALSE;
+     NMDnsConfigIPData   *ip_data = NULL;
+     int                  dns_priority;
+@@ -1890,6 +1965,7 @@ nm_dns_manager_set_ip_config(NMDnsManage
+ 
+     nm_assert_addr_family(addr_family);
+ 
++    iface = nm_platform_link_get_name (NM_PLATFORM_GET, ifindex);
+     priv = NM_DNS_MANAGER_GET_PRIVATE(self);
+ 
+     data = NULL;
+@@ -1999,6 +2075,14 @@ done:
+             _LOGW("could not commit DNS changes: %s", error->message);
+     }
+ 
++    gs_free_error GError *error = NULL;
++    if (!xc_rewrite_resolv_conf (self, ip_data, &error)) {
++        _LOGW ("Could not commit DNS changes: (%d) %s",
++            error ? error->code : -1,
++            error && error->message ? error->message : "(unknown)");
++        g_clear_error (&error);
++    }
++
+     return TRUE;
+ }
+ 

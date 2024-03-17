@@ -1,0 +1,60 @@
+#OpenXT:Seen BSSIDs are populated in database for the purpose of saving them on boot.
+#       Reloading of these seen-bssids is done by network-slave on start up.
+--- a/src/core/settings/nm-settings-connection.c
++++ b/src/core/settings/nm-settings-connection.c
+@@ -4,6 +4,8 @@
+  * Copyright (C) 2008 - 2014 Red Hat, Inc.
+  */
+ 
++#include <errno.h>
++#include <sys/wait.h>
+ #include "src/core/nm-default-daemon.h"
+ 
+ #include "nm-settings-connection.h"
+@@ -39,6 +41,8 @@
+                                | NM_SETTINGS_UPDATE2_FLAG_IN_MEMORY_DETACHED \
+                                | NM_SETTINGS_UPDATE2_FLAG_IN_MEMORY_ONLY))
+ 
++static void update_seen_bssids_db ();
++
+ /*****************************************************************************/
+ 
+ NMConnection **
+@@ -2438,6 +2442,29 @@ nm_settings_connection_has_seen_bssid(NM
+                                     bssid);
+ }
+ 
++/* TODO: Update me to work with seen bssids since the FILE is no longer around. Also invoke me when removing seen-bssids */
++static void
++update_seen_bssids_db (void)
++{
++/*
++    char *argv[6] = { "/usr/bin/nm_sync.sh", "-n", "seen-bssids", "-w", SETTINGS_SEEN_BSSIDS_FILE, NULL };
++    int err, stat_loc;
++
++    err = fork();
++    if (err == -1) {
++        g_warning("%s.%d: cannot fork to nm_sync.sh: %d", __FILE__, __LINE__, errno);
++    } else if (err) {
++        while ((waitpid(err, &stat_loc, 0) == -1) && (errno == EINTR))
++            ;
++        err = WEXITSTATUS(stat_loc);
++        if (err)
++            g_warning("%s.%d: nm_sync.sh failed with code: %d", __FILE__, __LINE__, err);
++    } else {
++        _exit(execvp(argv[0], argv));
++    }
++*/
++}
++
+ /**
+  * nm_settings_connection_add_seen_bssid:
+  * @self: the #NMSettingsConnection
+@@ -2501,6 +2528,7 @@ nm_settings_connection_add_seen_bssid(NM
+ 
+     i = _get_seen_bssids(self, seen_bssids_strv);
+     nm_key_file_db_set_string_list(priv->kf_db_seen_bssids, connection_uuid, seen_bssids_strv, i);
++    update_seen_bssids_db ();
+ }
+ 
+ /*****************************************************************************/
