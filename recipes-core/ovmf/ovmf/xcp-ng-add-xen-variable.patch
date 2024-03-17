@@ -8,7 +8,7 @@
  
  //
  // Module Globals
-@@ -1060,6 +1061,34 @@ CoreUnloadAndCloseImage (
+@@ -1089,6 +1090,34 @@ CoreUnloadAndCloseImage (
    CoreFreePool (Image);
  }
  
@@ -40,10 +40,10 @@
 +  return status;
 +}
 +
- 
  /**
    Loads an EFI image into memory and returns a handle to the image.
-@@ -1274,6 +1303,14 @@ CoreLoadImageCommon (
+ 
+@@ -1304,6 +1333,14 @@ CoreLoadImageCommon (
                                    );
    }
  
@@ -204,26 +204,25 @@
 +
 --- a/OvmfPkg/OvmfPkgX64.dsc
 +++ b/OvmfPkg/OvmfPkgX64.dsc
-@@ -33,6 +33,7 @@
+@@ -32,6 +32,7 @@
+   DEFINE SECURE_BOOT_ENABLE      = FALSE
+   DEFINE SMM_REQUIRE             = FALSE
    DEFINE SOURCE_DEBUG_ENABLE     = FALSE
-   DEFINE TPM_ENABLE              = FALSE
-   DEFINE TPM_CONFIG_ENABLE       = FALSE
 +  DEFINE XEN_VARIABLE_ENABLE     = FALSE
  
-   #
-   # Network definition
-@@ -200,8 +201,9 @@
+ !include OvmfPkg/OvmfTpmDefines.dsc.inc
+ 
+@@ -213,7 +214,9 @@
  !else
    AuthVariableLib|MdeModulePkg/Library/AuthVariableLibNull/AuthVariableLibNull.inf
  !endif
 +!if $(XEN_VARIABLE_ENABLE) == FALSE
    VarCheckLib|MdeModulePkg/Library/VarCheckLib/VarCheckLib.inf
--
 +!endif
+   VariablePolicyLib|MdeModulePkg/Library/VariablePolicyLib/VariablePolicyLib.inf
+   VariablePolicyHelperLib|MdeModulePkg/Library/VariablePolicyHelperLib/VariablePolicyHelperLib.inf
  
-   #
-   # Network libraries
-@@ -982,6 +984,9 @@
+@@ -988,6 +991,9 @@
    #
    # Variable driver stack (non-SMM)
    #
@@ -233,7 +232,7 @@
    OvmfPkg/QemuFlashFvbServicesRuntimeDxe/FvbServicesRuntimeDxe.inf
    OvmfPkg/EmuVariableFvbRuntimeDxe/Fvb.inf {
      <LibraryClasses>
-@@ -993,6 +998,7 @@
+@@ -999,6 +1005,7 @@
        NULL|MdeModulePkg/Library/VarCheckUefiLib/VarCheckUefiLib.inf
    }
  !endif
@@ -243,7 +242,7 @@
    # TPM support
 --- a/OvmfPkg/OvmfPkgX64.fdf
 +++ b/OvmfPkg/OvmfPkgX64.fdf
-@@ -203,9 +203,11 @@ APRIORI DXE {
+@@ -215,9 +215,11 @@ APRIORI DXE {
    INF  MdeModulePkg/Universal/DevicePathDxe/DevicePathDxe.inf
    INF  MdeModulePkg/Universal/PCD/Dxe/Pcd.inf
    INF  OvmfPkg/AmdSevDxe/AmdSevDxe.inf
@@ -255,7 +254,7 @@
  }
  
  #
-@@ -368,11 +370,15 @@ INF  MdeModulePkg/Universal/Variable/Run
+@@ -377,11 +379,15 @@ INF  MdeModulePkg/Universal/Variable/Run
  #
  # Variable driver stack (non-SMM)
  #

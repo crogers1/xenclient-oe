@@ -4,11 +4,12 @@ FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}:"
 # https://github.com/xcp-ng-rpms/edk2/tree/master/SOURCES
 SRC_URI += " \
     https://downloadmirror.intel.com/29334/eng/PREBOOT.EXE;unpack=0;name=PREBOOT \
-    file://xcp-ng-set-default-resolution-1024-768.patch \
     file://xcp-ng-add-xen-variable.patch \
     file://xcp-ng-add-xen-platform-device-id.patch \
     file://xcp-ng-xenorder.patch \
     file://xcp-ng-keep-caching-enabled.patch \
+    file://rename-xen-timer-dxe.patch \
+    file://use-rtc.patch \
 "
 
 DEPENDS:append = " \
@@ -31,9 +32,9 @@ do_extract_bootutil[dirs] = "${B}"
 do_compile:class-target:append() {
     bbnote "Building with E1000 (support for netboot)."
     rm -rf ${S}/Build/Ovmf$OVMF_DIR_SUFFIX
-    ${S}/OvmfPkg/build.sh $PARALLEL_JOBS -a $OVMF_ARCH -b RELEASE -t ${FIXED_GCCVER} -D E1000_ENABLE -D XEN_VARIABLE_ENABLE=TRUE -D SECURE_BOOT_ENABLE=TRUE
+    build_dir="${S}/Build/OvmfXen/RELEASE_${FIXED_GCCVER}"
+    ${S}/OvmfPkg/build.sh $PARALLEL_JOBS -a X64 -p ${S}/OvmfPkg/OvmfXen.dsc -b RELEASE -t ${FIXED_GCCVER} -D E1000_ENABLE -D XEN_VARIABLE_ENABLE=TRUE -D SECURE_BOOT_ENABLE=TRUE
     ln ${build_dir}/FV/OVMF.fd ${WORKDIR}/ovmf/ovmf.e1000.fd
-    ln ${build_dir}/FV/OVMF_CODE.fd ${WORKDIR}/ovmf/ovmf.e1000.code.fd
 }
 
 do_install:class-target:append() {
@@ -49,3 +50,6 @@ PACKAGES += " \
 FILES:${PN}-firmware += " \
     ${datadir}/firmware \
 "
+INSANE_SKIP:${PN} += "arch"
+INSANE_SKIP:${PN}-firmware += "arch"
+INSANE_SKIP:${PN}-firmware += "arch"

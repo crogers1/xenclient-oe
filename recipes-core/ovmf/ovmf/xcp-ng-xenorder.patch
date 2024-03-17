@@ -43,7 +43,7 @@
 +#endif
 --- a/OvmfPkg/Library/PlatformBootManagerLib/BdsPlatform.c
 +++ b/OvmfPkg/Library/PlatformBootManagerLib/BdsPlatform.c
-@@ -1534,6 +1534,9 @@ PlatformBootManagerAfterConsole (
+@@ -1717,6 +1717,9 @@ PlatformBootManagerAfterConsole (
  
    RemoveStaleFvFileOptions ();
    SetBootOrderFromQemu ();
@@ -55,15 +55,7 @@
  }
 --- a/OvmfPkg/Library/PlatformBootManagerLib/BdsPlatform.h
 +++ b/OvmfPkg/Library/PlatformBootManagerLib/BdsPlatform.h
-@@ -17,7 +17,6 @@ Abstract:
- #ifndef _PLATFORM_SPECIFIC_BDS_PLATFORM_H_
- #define _PLATFORM_SPECIFIC_BDS_PLATFORM_H_
- 
--
- #include <PiDxe.h>
- 
- #include <IndustryStandard/Pci.h>
-@@ -45,6 +44,7 @@ Abstract:
+@@ -44,6 +44,7 @@ Abstract:
  #include <Library/QemuFwCfgLib.h>
  #include <Library/QemuFwCfgS3Lib.h>
  #include <Library/QemuBootOrderLib.h>
@@ -420,7 +412,7 @@
 +  gEfiSimpleNetworkProtocolGuid
 --- a/OvmfPkg/OvmfPkg.dec
 +++ b/OvmfPkg/OvmfPkg.dec
-@@ -79,6 +79,10 @@
+@@ -86,6 +86,10 @@
    #
    QemuLoadImageLib|Include/Library/QemuLoadImageLib.h
  
@@ -433,7 +425,7 @@
    SerializeVariablesLib|Include/Library/SerializeVariablesLib.h
 --- a/OvmfPkg/OvmfPkgX64.dsc
 +++ b/OvmfPkg/OvmfPkgX64.dsc
-@@ -375,6 +375,7 @@
+@@ -384,6 +384,7 @@
    PlatformBootManagerLib|OvmfPkg/Library/PlatformBootManagerLib/PlatformBootManagerLib.inf
    PlatformBmPrintScLib|OvmfPkg/Library/PlatformBmPrintScLib/PlatformBmPrintScLib.inf
    QemuBootOrderLib|OvmfPkg/Library/QemuBootOrderLib/QemuBootOrderLib.inf
@@ -441,3 +433,13 @@
    CpuExceptionHandlerLib|UefiCpuPkg/Library/CpuExceptionHandlerLib/DxeCpuExceptionHandlerLib.inf
  !if $(SMM_REQUIRE) == TRUE
    LockBoxLib|MdeModulePkg/Library/SmmLockBoxLib/SmmLockBoxDxeLib.inf
+--- a/OvmfPkg/OvmfXen.dsc
++++ b/OvmfPkg/OvmfXen.dsc
+@@ -327,6 +327,7 @@
+   PlatformBootManagerLib|OvmfPkg/Library/PlatformBootManagerLib/PlatformBootManagerLib.inf
+   PlatformBmPrintScLib|OvmfPkg/Library/PlatformBmPrintScLib/PlatformBmPrintScLib.inf
+   QemuBootOrderLib|OvmfPkg/Library/QemuBootOrderLib/QemuBootOrderLib.inf
++  XenBootOrderLib|OvmfPkg/Library/XenBootOrderLib/XenBootOrderLib.inf
+   CpuExceptionHandlerLib|UefiCpuPkg/Library/CpuExceptionHandlerLib/DxeCpuExceptionHandlerLib.inf
+   LockBoxLib|OvmfPkg/Library/LockBoxLib/LockBoxDxeLib.inf
+ !if $(SOURCE_DEBUG_ENABLE) == TRUE

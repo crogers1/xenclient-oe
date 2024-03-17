@@ -1,0 +1,165 @@
+commit c2e7be4055cbfa604042dc0edac186a5f234163b
+Author: Min Xu <min.m.xu@intel.com>
+Date:   Mon Oct 25 10:20:31 2021 +0800
+
+    OvmfPkg: Rename XenTimerDxe to LocalApicTimerDxe
+    
+    BZ: https://bugzilla.tianocore.org/show_bug.cgi?id=3711
+    
+    XenTimerDxe is a local Apic timer driver and it has nothing to do
+    with Xen. So rename it to LocalApicTimerDxe.
+    
+    Cc: Ard Biesheuvel <ardb+tianocore@kernel.org>
+    Cc: Jordan Justen <jordan.l.justen@intel.com>
+    Cc: Brijesh Singh <brijesh.singh@amd.com>
+    Cc: Erdem Aktas <erdemaktas@google.com>
+    Cc: James Bottomley <jejb@linux.ibm.com>
+    Cc: Jiewen Yao <jiewen.yao@intel.com>
+    Cc: Tom Lendacky <thomas.lendacky@amd.com>
+    Cc: Gerd Hoffmann <kraxel@redhat.com>
+    Cc: Anthony Perard <anthony.perard@citrix.com>
+    Cc: Julien Grall <julien@xen.org>
+    Acked-by: Anthony PERARD <anthony.perard@citrix.com
+    Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+    Reviewed-by: Jiewen Yao <jiewen.yao@intel.com>
+    Signed-off-by: Min Xu <min.m.xu@intel.com>
+
+diff --git a/OvmfPkg/CloudHv/CloudHvX64.dsc b/OvmfPkg/CloudHv/CloudHvX64.dsc
+index ee340cc654..380438e0dc 100644
+--- a/OvmfPkg/CloudHv/CloudHvX64.dsc
++++ b/OvmfPkg/CloudHv/CloudHvX64.dsc
+@@ -710,7 +710,7 @@
+   MdeModulePkg/Universal/EbcDxe/EbcDxe.inf
+   UefiCpuPkg/CpuIo2Dxe/CpuIo2Dxe.inf
+   UefiCpuPkg/CpuDxe/CpuDxe.inf
+-  OvmfPkg/XenTimerDxe/XenTimerDxe.inf
++  OvmfPkg/LocalApicTimerDxe/LocalApicTimerDxe.inf
+   OvmfPkg/IncompatiblePciDeviceSupportDxe/IncompatiblePciDeviceSupport.inf
+   OvmfPkg/PciHotPlugInitDxe/PciHotPlugInit.inf
+   MdeModulePkg/Bus/Pci/PciHostBridgeDxe/PciHostBridgeDxe.inf {
+diff --git a/OvmfPkg/CloudHv/CloudHvX64.fdf b/OvmfPkg/CloudHv/CloudHvX64.fdf
+index d80e13ae90..de64a3a709 100644
+--- a/OvmfPkg/CloudHv/CloudHvX64.fdf
++++ b/OvmfPkg/CloudHv/CloudHvX64.fdf
+@@ -216,7 +216,7 @@ INF  MdeModulePkg/Universal/SecurityStubDxe/SecurityStubDxe.inf
+ INF  MdeModulePkg/Universal/EbcDxe/EbcDxe.inf
+ INF  UefiCpuPkg/CpuIo2Dxe/CpuIo2Dxe.inf
+ INF  UefiCpuPkg/CpuDxe/CpuDxe.inf
+-INF  OvmfPkg/XenTimerDxe/XenTimerDxe.inf
++INF  OvmfPkg/LocalApicTimerDxe/LocalApicTimerDxe.inf
+ INF  OvmfPkg/IncompatiblePciDeviceSupportDxe/IncompatiblePciDeviceSupport.inf
+ INF  OvmfPkg/PciHotPlugInitDxe/PciHotPlugInit.inf
+ INF  MdeModulePkg/Bus/Pci/PciHostBridgeDxe/PciHostBridgeDxe.inf
+diff --git a/OvmfPkg/XenTimerDxe/XenTimerDxe.c b/OvmfPkg/LocalApicTimerDxe/LocalApicTimerDxe.c
+similarity index 96%
+rename from OvmfPkg/XenTimerDxe/XenTimerDxe.c
+rename to OvmfPkg/LocalApicTimerDxe/LocalApicTimerDxe.c
+index bbd964eb7a..dd9352b120 100644
+--- a/OvmfPkg/XenTimerDxe/XenTimerDxe.c
++++ b/OvmfPkg/LocalApicTimerDxe/LocalApicTimerDxe.c
+@@ -8,7 +8,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
+ 
+ **/
+ 
+-#include "XenTimerDxe.h"
++#include "LocalApicTimerDxe.h"
+ 
+ //
+ // The handle onto which the Timer Architectural Protocol will be installed
+diff --git a/OvmfPkg/XenTimerDxe/XenTimerDxe.h b/OvmfPkg/LocalApicTimerDxe/LocalApicTimerDxe.h
+similarity index 96%
+rename from OvmfPkg/XenTimerDxe/XenTimerDxe.h
+rename to OvmfPkg/LocalApicTimerDxe/LocalApicTimerDxe.h
+index b55ece0d94..93706995f8 100644
+--- a/OvmfPkg/XenTimerDxe/XenTimerDxe.h
++++ b/OvmfPkg/LocalApicTimerDxe/LocalApicTimerDxe.h
+@@ -7,8 +7,8 @@ Copyright (c) 2019, Citrix Systems, Inc.
+ SPDX-License-Identifier: BSD-2-Clause-Patent
+ **/
+ 
+-#ifndef _TIMER_H_
+-#define _TIMER_H_
++#ifndef LOCAL_APIC_TIMER_H_
++#define LOCAL_APIC_TIMER_H_
+ 
+ #include <PiDxe.h>
+ 
+diff --git a/OvmfPkg/XenTimerDxe/XenTimerDxe.inf b/OvmfPkg/LocalApicTimerDxe/LocalApicTimerDxe.inf
+similarity index 86%
+rename from OvmfPkg/XenTimerDxe/XenTimerDxe.inf
+rename to OvmfPkg/LocalApicTimerDxe/LocalApicTimerDxe.inf
+index add1d01bbf..63b75b75c9 100644
+--- a/OvmfPkg/XenTimerDxe/XenTimerDxe.inf
++++ b/OvmfPkg/LocalApicTimerDxe/LocalApicTimerDxe.inf
+@@ -10,7 +10,7 @@
+ 
+ [Defines]
+   INF_VERSION                    = 0x00010005
+-  BASE_NAME                      = XenTimerDxe
++  BASE_NAME                      = LocalApicTimerDxe
+   FILE_GUID                      = 52fe8196-f9de-4d07-b22f-51f77a0e7c41
+   MODULE_TYPE                    = DXE_DRIVER
+   VERSION_STRING                 = 1.0
+@@ -30,8 +30,8 @@
+   LocalApicLib
+ 
+ [Sources]
+-  XenTimerDxe.h
+-  XenTimerDxe.c
++  LocalApicTimerDxe.h
++  LocalApicTimerDxe.c
+ 
+ [Protocols]
+   gEfiCpuArchProtocolGuid       ## CONSUMES
+diff --git a/OvmfPkg/Microvm/MicrovmX64.dsc b/OvmfPkg/Microvm/MicrovmX64.dsc
+index 9fc0ff2750..59580ccd46 100644
+--- a/OvmfPkg/Microvm/MicrovmX64.dsc
++++ b/OvmfPkg/Microvm/MicrovmX64.dsc
+@@ -668,7 +668,7 @@
+ 
+   MdeModulePkg/Universal/SecurityStubDxe/SecurityStubDxe.inf
+   MdeModulePkg/Universal/EbcDxe/EbcDxe.inf
+-  OvmfPkg/XenTimerDxe/XenTimerDxe.inf
++  OvmfPkg/LocalApicTimerDxe/LocalApicTimerDxe.inf
+   UefiCpuPkg/CpuIo2Dxe/CpuIo2Dxe.inf
+   UefiCpuPkg/CpuDxe/CpuDxe.inf
+   OvmfPkg/IncompatiblePciDeviceSupportDxe/IncompatiblePciDeviceSupport.inf
+diff --git a/OvmfPkg/Microvm/MicrovmX64.fdf b/OvmfPkg/Microvm/MicrovmX64.fdf
+index 6999ac1a87..3adb492a4a 100644
+--- a/OvmfPkg/Microvm/MicrovmX64.fdf
++++ b/OvmfPkg/Microvm/MicrovmX64.fdf
+@@ -215,7 +215,7 @@ INF  MdeModulePkg/Universal/PCD/Dxe/Pcd.inf
+ INF  MdeModulePkg/Core/RuntimeDxe/RuntimeDxe.inf
+ INF  MdeModulePkg/Universal/SecurityStubDxe/SecurityStubDxe.inf
+ INF  MdeModulePkg/Universal/EbcDxe/EbcDxe.inf
+-INF  OvmfPkg/XenTimerDxe/XenTimerDxe.inf
++INF  OvmfPkg/LocalApicTimerDxe/LocalApicTimerDxe.inf
+ INF  UefiCpuPkg/CpuIo2Dxe/CpuIo2Dxe.inf
+ INF  UefiCpuPkg/CpuDxe/CpuDxe.inf
+ INF  OvmfPkg/IncompatiblePciDeviceSupportDxe/IncompatiblePciDeviceSupport.inf
+diff --git a/OvmfPkg/OvmfXen.dsc b/OvmfPkg/OvmfXen.dsc
+index 78d1509f75..7bd594c6e2 100644
+--- a/OvmfPkg/OvmfXen.dsc
++++ b/OvmfPkg/OvmfXen.dsc
+@@ -560,7 +560,7 @@
+   MdeModulePkg/Universal/SecurityStubDxe/SecurityStubDxe.inf
+ 
+   MdeModulePkg/Universal/EbcDxe/EbcDxe.inf
+-  OvmfPkg/XenTimerDxe/XenTimerDxe.inf
++  OvmfPkg/LocalApicTimerDxe/LocalApicTimerDxe.inf
+   UefiCpuPkg/CpuIo2Dxe/CpuIo2Dxe.inf
+   UefiCpuPkg/CpuDxe/CpuDxe.inf
+   OvmfPkg/PciHotPlugInitDxe/PciHotPlugInit.inf
+diff --git a/OvmfPkg/OvmfXen.fdf b/OvmfPkg/OvmfXen.fdf
+index 2e67db5d32..029b7dadcb 100644
+--- a/OvmfPkg/OvmfXen.fdf
++++ b/OvmfPkg/OvmfXen.fdf
+@@ -245,7 +245,7 @@ INF  MdeModulePkg/Universal/PCD/Dxe/Pcd.inf
+ INF  MdeModulePkg/Core/RuntimeDxe/RuntimeDxe.inf
+ INF  MdeModulePkg/Universal/SecurityStubDxe/SecurityStubDxe.inf
+ INF  MdeModulePkg/Universal/EbcDxe/EbcDxe.inf
+-INF  OvmfPkg/XenTimerDxe/XenTimerDxe.inf
++INF  OvmfPkg/LocalApicTimerDxe/LocalApicTimerDxe.inf
+ INF  UefiCpuPkg/CpuIo2Dxe/CpuIo2Dxe.inf
+ INF  UefiCpuPkg/CpuDxe/CpuDxe.inf
+ INF  OvmfPkg/PciHotPlugInitDxe/PciHotPlugInit.inf
