@@ -24,10 +24,11 @@ SRC_URI[sha256sum] = "007212deacab8eb159d71449766f9b2e0523439f1c4fd64d1932eb38cb
 inherit deploy
 
 # safestringlib/safeclib/mem_primitives_lib.c has a lot of fallthrough.
-CFLAGS:append = "-Wno-implicit-fallthrough"
+CFLAGS:append = "-Wno-implicit-fallthrough -Wno-deprecated-declarations"
 EXTRA_OEMAKE = "INSTALL_STRIP=''"
 
 do_compile() {
+    export TBOOT_CFLAGS="${TBOOT_CFLAGS} -Wno-array-parameter -Wno-maybe-uninitialized -Wno-deprecated-declarations"
     oe_runmake SUBDIRS="tboot" CC="${HOST_PREFIX}gcc ${TOOLCHAIN_OPTIONS}" CPP="${HOST_PREFIX}cpp ${TOOLCHAIN_OPTIONS}"
     if [ "${TBOOT_TARGET_ARCH}" != "x86_32" ]; then
         # Safestringlib is built statically by tboot right before and
