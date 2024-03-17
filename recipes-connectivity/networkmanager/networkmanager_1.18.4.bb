@@ -51,7 +51,7 @@ EXTRA_OECONF = " \
 CFLAGS:append:libc-musl = " \
     -DRTLD_DEEPBIND=0 \
 "
-
+CFLAGS:append = " -fcommon "
 do_compile:prepend() {
     export GIR_EXTRA_LIBS_PATH="${B}/libnm/.libs:${B}/libnm-glib/.libs:${B}/libnm-util/.libs"
 }
@@ -72,7 +72,7 @@ PACKAGECONFIG[consolekit] = "--with-session-tracking=consolekit,,consolekit,cons
 PACKAGECONFIG[modemmanager] = "--with-modem-manager-1=yes,--with-modem-manager-1=no,modemmanager"
 PACKAGECONFIG[ppp] = "--enable-ppp,--disable-ppp,ppp,ppp"
 # Use full featured dhcp client instead of internal one
-PACKAGECONFIG[dhclient] = "--with-dhclient=${base_sbindir}/dhclient,,,dhcp-client"
+PACKAGECONFIG[dhclient] = "--with-dhclient=${base_sbindir}/dhclient,,,dhcpcd"
 PACKAGECONFIG[dnsmasq] = "--with-dnsmasq=${bindir}/dnsmasq"
 PACKAGECONFIG[nss] = "--with-crypto=nss,,nss"
 PACKAGECONFIG[glib] = "--with-libnm-glib,,dbus-glib-native dbus-glib"
