@@ -15,6 +15,8 @@ SRC_URI = "git://github.com/01org/tpm2-tools.git;protocol=https;branch=3.X \
     file://tpm2-nvlist-drop-ntoh.patch \
 "
 
+CFLAGS:append = " -Wno-deprecated-declarations"
+
 S = "${WORKDIR}/git"
 
 inherit autotools pkgconfig
