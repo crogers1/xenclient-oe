@@ -29,7 +29,7 @@ EXTRA_OEMAKE += " \
 INSANE_SKIP_${PN}-dbg = "arch"
 
 do_configure() {
-    echo "debug := n" > .config
+    echo "debug := y" > .config
     echo "XSM_ENABLE := y" >> .config
     echo "FLASK_ENABLE := y" >> .config
 
