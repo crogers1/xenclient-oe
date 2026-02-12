@@ -1086,3 +1086,47 @@ Signed-off-by: Tamas K Lengyel <lengyelt@ainfosec.com>
  
  elf_ptrval elf_get_ptr(struct elf_binary *elf, unsigned long addr);
  uint64_t elf_lookup_addr(struct elf_binary *elf, const char *symbol);
+--- a/xen/arch/x86/setup.c
++++ b/xen/arch/x86/setup.c
+@@ -495,6 +495,10 @@ static void *__init bootstrap_map_addr(p
+     uint64_t mask = (1L << L2_PAGETABLE_SHIFT) - 1;
+     void *ret;
+ 
++    if ( system_state == SYS_STATE_early_boot )
++        printk("*** %s(%016"PRIx64", %016"PRIx64")\n", __func__, start, end);
++    
++ 
+     if ( system_state != SYS_STATE_early_boot )
+         return end ? maddr_to_virt(start) : NULL;
+ 
+@@ -1239,7 +1243,6 @@ void asmlinkage __init noreturn __start_
+      * configuring the console(s).
+      */
+     early_cpu_init(true);
+-    early_microcode_init(bi);
+ 
+     if ( pvh_boot )
+         pvh_print_info();
+@@ -1332,6 +1335,7 @@ void asmlinkage __init noreturn __start_
+     }
+     else if ( efi_enabled(EFI_LOADER) )
+     {
++	printk("in EFI_LOADER block");
+         set_pdx_range(xen_phys_start >> PAGE_SHIFT,
+                       (xen_phys_start + BOOTSTRAP_MAP_BASE) >> PAGE_SHIFT);
+ 
+@@ -1343,10 +1347,13 @@ void asmlinkage __init noreturn __start_
+         l3_bootmap[l3_table_offset(BOOTSTRAP_MAP_BASE)] =
+             l3e_from_paddr(__pa(l2_bootmap), __PAGE_HYPERVISOR);
+ 
++        early_microcode_init(bi);
+         memmap_type = bi->loader;
+     }
+-    else if ( efi_enabled(EFI_BOOT) )
++    else if ( efi_enabled(EFI_BOOT) ) {
++        printk("in EFI_BOOT block");
+         memmap_type = "EFI";
++    }
+     else if ( (e820_raw.nr_map = 
+                    copy_bios_e820(e820_raw.map,
+                                   ARRAY_SIZE(e820_raw.map))) != 0 )

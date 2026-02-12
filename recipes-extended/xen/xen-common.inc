@@ -4,6 +4,9 @@ FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 # This ensures that any collisions with other patches get addressed
 # by modifying the OpenXT-specific patches, not the XSA patches.
 
+#file://0000-tools-flask-allow-get_domain_state-on-unlabeled_t.patch 
+#file://0002-common-domctl-ensure-requesting-domain-has-get_domai.patch 
+
 SRC_URI_append = " \
     file://defconfig \
     file://0001-python-pygrub-pass-DISTUTILS-xen.4.12.patch \
@@ -64,6 +67,8 @@ SRC_URI_append = " \
     file://libxl-add-xen-acpi-pm.patch \
     file://0001-vchan-socket-proxy-add-reconnect-marker-support.patch \
     file://0002-tools-libxl-enable-in-band-reconnect-marker-for-stub.patch \
+    file://xen-debug.patch \
+    file://xsm-debug.patch \
 "
 
 # Unset variables inherited from meta-virt dunfell to avoid multilib
